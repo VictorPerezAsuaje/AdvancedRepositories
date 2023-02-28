@@ -7,6 +7,8 @@ namespace AdvancedRepositories.Core.Repositories.Fluent;
 
 public interface ISelectQuery
 {
+    FluentQueryBuilder<T> Select<T>(params string[] fields) where T : class, new();
+    FluentQueryBuilder<T> SelectDistinct<T>(params string[] fields) where T : class, new();
     FluentQueryBuilder<T> Select<T>() where T : class, new();
     FluentQueryBuilder<T> SelectDistinct<T>() where T : class, new();
 }
@@ -17,6 +19,30 @@ public class FluentRepository : BaseRepository, IFluentRepository
 {
     public FluentRepository(BaseDatabaseConfiguration dbConfig) : base(dbConfig)
     {
+    }
+
+    public FluentQueryBuilder<T> Select<T>(params string[] fields) where T : class, new()
+    {
+        string queryFields = "";
+
+        foreach (string field in fields)
+        {
+            queryFields += $"{(string.IsNullOrWhiteSpace(queryFields) ? "" : ",")} {field}";
+        }
+
+        return new FluentQueryBuilder<T>(CreateCommand(""), $"SELECT {queryFields} ");
+    }
+
+    public FluentQueryBuilder<T> SelectDistinct<T>(params string[] fields) where T : class, new()
+    {
+        string queryFields = "";
+
+        foreach (string field in fields)
+        {
+            queryFields += $"{(string.IsNullOrWhiteSpace(queryFields) ? "" : ",")} {field}";
+        }
+
+        return new FluentQueryBuilder<T>(CreateCommand(""), $"SELECT DISTINCT {queryFields} ");
     }
 
     public FluentQueryBuilder<T> Select<T>() where T : class, new()
@@ -32,7 +58,7 @@ public class FluentRepository : BaseRepository, IFluentRepository
         }
 
         return new FluentQueryBuilder<T>(CreateCommand(""), $"SELECT {queryFields} ");
-    }
+    }    
 
     public FluentQueryBuilder<T> SelectDistinct<T>() where T : class, new()
     {

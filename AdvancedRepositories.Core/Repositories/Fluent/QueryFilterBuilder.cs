@@ -8,10 +8,7 @@ public class QueryFilterBuilder
     int _ParamNumber => _cmd.Parameters.Count;
     string _Where = "";
 
-    public QueryFilterBuilder(SqlCommand cmd)
-    {
-        _cmd = cmd;
-    }
+    public QueryFilterBuilder(SqlCommand cmd) => _cmd = cmd;
 
     public QueryFilterBuilder(SqlCommand cmd, Action<QueryFilterBuilder> filterConfig)
     {
@@ -32,7 +29,7 @@ public class QueryFilterBuilder
     {
         QueryFilterBuilder _Filter;
         string _Name { get; set; }
-        string _Comparer { get; set; } // And, or, etc.
+        string _Comparer { get; set; }
 
         public Column(QueryFilterBuilder filter, string name, string comparer)
         {
@@ -164,7 +161,7 @@ public class QueryFilterBuilder
 
     }
 
-    string ModificadorOrWhere(string modifier = "")
+    string ModifierOrWhere(string modifier = "")
     {
         if (string.IsNullOrEmpty(_Where)) return "WHERE";
 
@@ -175,13 +172,13 @@ public class QueryFilterBuilder
 
 
     public Column ColumnName(string column)
-        => new Column(this, column, ModificadorOrWhere());
+        => new Column(this, column, ModifierOrWhere());
 
     public Column And(string column)
-        => new Column(this, column, ModificadorOrWhere("AND"));
+        => new Column(this, column, ModifierOrWhere("AND"));
 
     public Column Or(string column)
-        => new Column(this, column, ModificadorOrWhere("OR"));
+        => new Column(this, column, ModifierOrWhere("OR"));
 
     public QueryFilterBuilder GroupFilter(Action<List<Action<QueryFilterBuilder>>> grupoFiltros)
     {
@@ -190,7 +187,7 @@ public class QueryFilterBuilder
 
         if (acciones.Count == 0) return this;
 
-        AddToWhere($"{ModificadorOrWhere()} (");
+        AddToWhere($"{ModifierOrWhere()} (");
         acciones.ForEach(x => x(this));
         AddToWhere(")");
         return this;
@@ -203,7 +200,7 @@ public class QueryFilterBuilder
 
         if (acciones.Count == 0) return this;
 
-        AddToWhere($"{ModificadorOrWhere("AND")} (");
+        AddToWhere($"{ModifierOrWhere("AND")} (");
         acciones.ForEach(x => x(this));
         AddToWhere(")");
         return this;
@@ -216,7 +213,7 @@ public class QueryFilterBuilder
 
         if (acciones.Count == 0) return this;
 
-        AddToWhere($"{ModificadorOrWhere("OR")} (");
+        AddToWhere($"{ModifierOrWhere("OR")} (");
         acciones.ForEach(x => x(this));
         AddToWhere(")");
         return this;
@@ -228,13 +225,13 @@ public class QueryFilterBuilder
     internal string ApplyOrCondition(string condition)
         => $" {_Where} {condition.Replace("WHERE", "OR")} ";
 
-    internal SqlCommand GetCommandWithFilter()
+    public SqlCommand GetCommandWithFilter()
     {
         _cmd.CommandText += $" {_Where} ";
         return _cmd;
     }
 
-    internal SqlCommand GetCommandWithAndFilter()
+    public SqlCommand GetCommandWithAndFilter()
     {
         if (_cmd.CommandText.Contains("WHERE"))
             _cmd.CommandText += $" {_Where.Replace("WHERE", "AND")} ";
@@ -244,7 +241,7 @@ public class QueryFilterBuilder
         return _cmd;
     }
 
-    internal SqlCommand GetCommandWithOrFilter()
+    public SqlCommand GetCommandWithOrFilter()
     {
         if (_cmd.CommandText.Contains("WHERE"))
             _cmd.CommandText += $" {_Where.Replace("WHERE", "OR")} ";

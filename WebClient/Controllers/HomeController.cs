@@ -2,7 +2,6 @@
 using AdvancedRepositories.Core.Repositories.Fluent;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using WebClient.Infrastructure;
 using WebClient.Models;
 
@@ -10,27 +9,39 @@ namespace WebClient.Controllers;
 
 public class HomeController : Controller
 {
-    private readonly ILogger<HomeController> _logger;
     IArticleRepository _articleRepository;
     IFluentRepository _fluentRepo;
 
-    public HomeController(ILogger<HomeController> logger, IArticleRepository articleRepository, IFluentRepository fluentRepository)
+    public HomeController(IArticleRepository articleRepository, IFluentRepository fluentRepository)
     {
-        _logger = logger;
         _articleRepository = articleRepository;
         _fluentRepo = fluentRepository;
     }
 
     [HttpGet]
-    public IActionResult Index(string? title = null)
+    public IActionResult Index(int searchType = 1, string? title = null)
     {
         IndexVM vm = new IndexVM();
-        DbResult<List<Article>> articleResult = null;
+        
+        vm.Title = title;
+        vm.SearchType = searchType;
 
-        if (!string.IsNullOrWhiteSpace(title))
-            articleResult = _articleRepository.FindMultiple(x => x.ColumnName("Titulo").Like(title));
-        else
-            articleResult = _articleRepository.GetAll();
+        DbResult<List<Article>> articleResult = searchType switch
+        {
+            1 => _articleRepository.FindMultipleClassic(title),
+            2 => _articleRepository.FindMultipleBasic(x => x.ColumnName("Titulo").Like(title)),
+            3 => _articleRepository.FindMultipleAdvanced(x => x.ColumnName("Titulo").Like(title)),
+            4 => _fluentRepo.Select<Article>()
+                        .From("Articulos")
+                        .AndWhere(x => x.ColumnName("Titulo").Like(title))
+                        .GetList(x =>
+                        {
+                            x.Add("Id", "Id");
+                            x.Add("Title", "Titulo");
+                            x.Add("Slug", "Slug");
+                            x.Add("CreatedOn", "FechaCreacion");
+                        })
+        };
 
         if(articleResult.IsSuccess)
             vm.Articles = articleResult.Value;
@@ -38,7 +49,7 @@ public class HomeController : Controller
         vm.Tags = _fluentRepo.Select<TagDTO>()
             .FromDefaultTable()
             .OrderByDesc("Id")
-            .GetList();
+            .GetList().Value;
 
         return View(vm);
     }
@@ -64,6 +75,8 @@ public class HomeController : Controller
 
 public class IndexVM
 {
+    public string Title { get; set; }
+    public int SearchType { get; set; }
     public List<Article> Articles { get; set; } = new();
     public List<TagDTO> Tags { get; set; } = new();
 }

@@ -12,7 +12,16 @@
     <div class="card-body p-0" id="searchArticle">
         <div class="mb-3 px-3 pt-3">
             <label class="form-label">Title</label>
-            <input class="form-control" name="title">
+            <input class="form-control" name="title" value="@Model.Title">
+        </div>
+        
+        <div class="mb-3 p-3">
+            <select class="form-select" name="searchType">
+                <option value="1" selected="@(Model.SearchType == 1)">Classic</option>
+                <option value="2" selected="@(Model.SearchType == 2)">Basic</option>
+                <option value="3" selected="@(Model.SearchType == 3)">Advanced</option>
+                <option value="4" selected="@(Model.SearchType == 4)">Fluent</option>
+            </select>
         </div>
 
         <div class="card-footer text-end">
@@ -21,7 +30,7 @@
     </div>
 </form>
 
-<form asp-controller="Home" asp-action="Index" method="post" class="card">
+<form asp-controller="Home" asp-action="Index" method="post" class="card mt-3">
     <a class="card-header text-decoration-none" data-bs-toggle="collapse" href="#addArticle" role="button">
         <h3>Add new article</h3>
     </a>
@@ -49,7 +58,7 @@
 </form>
 
 
-<h2 class="text-center py-5">Articles</h2>
+<h2 class="text-center py-5">Articles found (@Model.Articles.Count)</h2>
 
 
 <table class="table">

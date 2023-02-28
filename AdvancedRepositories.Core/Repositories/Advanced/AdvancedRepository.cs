@@ -1,4 +1,5 @@
 ﻿using AdvancedRepositories.Core.Configuration;
+using AdvancedRepositories.Core.Repositories.Fluent;
 using System.Data.SqlClient;
 using System.Reflection;
 
@@ -12,6 +13,9 @@ public abstract class AdvancedRepository : BaseRepository
 
     protected AdvancedCommand CreateAdvancedCommand(string query = "")
     {
+        if(string.IsNullOrWhiteSpace(query)) 
+            throw new ArgumentNullException("The query can not be null nor empty.");
+
         SqlCommand cmd = new SqlCommand(query, _con, _transaction);
         return new AdvancedCommand(cmd, this);
     }
@@ -47,6 +51,12 @@ public abstract class AdvancedRepository : BaseRepository
         }
 
         public AdvancedCommandReady NoParameters() => new AdvancedCommandReady(_cmd, _advancedRepository);
+
+        public AdvancedCommandReady ApplyFilter(Action<QueryFilterBuilder> filterConfig)
+        {
+            QueryFilterBuilder filterBuilder = new QueryFilterBuilder(_cmd, filterConfig);
+            return new AdvancedCommandReady(filterBuilder.GetCommandWithFilter(), _advancedRepository);
+        }
     }
 
     public class AdvancedCommandReady
@@ -108,8 +118,7 @@ public abstract class AdvancedRepository : BaseRepository
                     foreach (PropertyInfo p in typeof(T).GetProperties())
                     {
                         string propertyName = p.Name;
-                        string dbPropName = "";
-                        if (!map.TryGetValue(propertyName, out dbPropName))
+                        if (!map.TryGetValue(propertyName, out string dbPropName))
                             continue;
 
                         Type type = p.PropertyType;

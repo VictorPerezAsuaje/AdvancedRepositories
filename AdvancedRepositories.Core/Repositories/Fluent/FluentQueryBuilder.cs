@@ -60,7 +60,29 @@ public class FluentQueryBuilder<T> where T : class, new()
 
     internal bool ContainsQueryField(string fieldName)
         => (_overridenQueryFields ?? _queryFields).Contains(fieldName);
+    
+    internal bool ContainsQueryFields()
+        => (_overridenQueryFields ?? _queryFields)
+        .Replace("SELECT", "").Replace("DISTINCT", "").Trim()
+        .Length > 0;
 
+    internal void ReplaceQueryFieldsWithMappedFields(List<string> dbFields)
+    {
+        if (dbFields.Count == 0 && !ContainsQueryFields())
+            throw new ArgumentNullException("No database fields specified. \nYou have to specify fields on the Select<T>( -- Your fields here -- ) and use a generic action, for instance, GetList(). \nOtherwise, leave generic Select<T>() and specify them at the selected action, for instance, GetList(x => { -- Your fields here -- }).");
+
+        string rewrittenQuery = "SELECT ";
+
+        if (_queryFields.Contains("DISTINCT")) 
+            rewrittenQuery += "DISTINCT ";
+
+        for(int i = 0; i < dbFields.Count; i++)
+        {
+            rewrittenQuery += $"{(i == 0 ? "" : ", ")} {dbFields[i]}";
+        }
+
+        _queryFields = rewrittenQuery;
+    }
 
     internal void OverrideColumnNames(string columnName, string newColumnName, string? alias = null)
     {
