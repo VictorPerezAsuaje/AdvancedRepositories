@@ -230,24 +230,4 @@ public class QueryFilterBuilder
         _cmd.CommandText += $" {_Where} ";
         return _cmd;
     }
-
-    public SqlCommand GetCommandWithAndFilter()
-    {
-        if (_cmd.CommandText.Contains("WHERE"))
-            _cmd.CommandText += $" {_Where.Replace("WHERE", "AND")} ";
-        else
-            _cmd.CommandText += $" {_Where} ";
-
-        return _cmd;
-    }
-
-    public SqlCommand GetCommandWithOrFilter()
-    {
-        if (_cmd.CommandText.Contains("WHERE"))
-            _cmd.CommandText += $" {_Where.Replace("WHERE", "OR")} ";
-        else
-            _cmd.CommandText += $" {_Where} ";
-
-        return _cmd;
-    }
 }
