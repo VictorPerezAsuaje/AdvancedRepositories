@@ -60,8 +60,6 @@ public abstract class AdvancedRepository : BaseRepository
             _advancedRepository = advancedRepository;
         }
 
-        public AdvancedCommandReady GetAdvancedCommand() => this;
-
         public DbResult Execute()
         {
             try

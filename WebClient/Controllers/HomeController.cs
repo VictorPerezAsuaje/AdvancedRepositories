@@ -2,6 +2,7 @@
 using AdvancedRepositories.Core.Repositories.Fluent;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using WebClient.Infrastructure;
 using WebClient.Models;
 
@@ -21,11 +22,15 @@ public class HomeController : Controller
     }
 
     [HttpGet]
-    public IActionResult Index()
+    public IActionResult Index(string? title = null)
     {
         IndexVM vm = new IndexVM();
+        DbResult<List<Article>> articleResult = null;
 
-        DbResult<List<Article>> articleResult = _articleRepository.GetAll();
+        if (!string.IsNullOrWhiteSpace(title))
+            articleResult = _articleRepository.FindMultiple(x => x.ColumnName("Titulo").Like(title));
+        else
+            articleResult = _articleRepository.GetAll();
 
         if(articleResult.IsSuccess)
             vm.Articles = articleResult.Value;

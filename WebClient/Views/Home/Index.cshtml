@@ -4,18 +4,34 @@
     ViewData["Title"] = "Home Page";
 }
 
+<form asp-controller="Home" asp-action="Index" method="get" class="card">
+    <a class="card-header text-decoration-none" data-bs-toggle="collapse" href="#searchArticle" role="button">
+        <h3>Search</h3>
+    </a>
+
+    <div class="card-body p-0" id="searchArticle">
+        <div class="mb-3 px-3 pt-3">
+            <label class="form-label">Title</label>
+            <input class="form-control" name="title">
+        </div>
+
+        <div class="card-footer text-end">
+            <button type="submit" class="btn btn-primary">SEARCH</button>
+        </div>
+    </div>
+</form>
 
 <form asp-controller="Home" asp-action="Index" method="post" class="card">
-    <div class="card-header">
+    <a class="card-header text-decoration-none" data-bs-toggle="collapse" href="#addArticle" role="button">
         <h3>Add new article</h3>
-    </div>
+    </a>
 
-    <div class="card-body">
-        <div class="mb-3">
+    <div class="card-body p-0 collapse" id="addArticle">
+        <div class="mb-3 px-3 pt-3">
             <label class="form-label">Title</label>
             <input class="form-control" name="Title">
         </div>
-        <div class="mb-3">
+        <div class="mb-3 px-3">
             <label class="form-label">Tag</label>
             <select class="form-select" name="Tag">
                 <option selected>-- Select --</option>
@@ -25,10 +41,10 @@
                 }
             </select>
         </div>
-    </div>
 
-    <div class="card-footer text-end">
-        <button type="submit" class="btn btn-primary">INSERT</button>
+        <div class="card-footer text-end">
+            <button type="submit" class="btn btn-primary">INSERT</button>
+        </div>
     </div>
 </form>
 
