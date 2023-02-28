@@ -10,9 +10,7 @@ namespace WebClient.Infrastructure;
 public interface IArticleRepository 
 {
     DbResult<List<Article>> FindMultipleClassic(string title);
-    DbResult<List<Article>> FindMultipleBasic(Action<QueryFilterBuilder> filter);
     DbResult<List<Article>> FindMultipleAdvanced(Action<QueryFilterBuilder> filter);
-    DbResult<List<Article>> GetAll();
     DbResult Insert(Article article);
 }
 
@@ -60,51 +58,9 @@ public class ArticleRepository : AdvancedRepository, IArticleRepository
 
         return DbResult.Ok(articles);
     }
-    public DbResult<List<Article>> FindMultipleBasic(Action<QueryFilterBuilder> filter)
-    {
-        List<Article> articles = new List<Article>();
-
-        try
-        {
-            SqlCommand cmd = CreateCommand("SELECT Id, Titulo, Slug, FechaCreacion FROM Articulos ");
-
-            QueryFilterBuilder queryFilterBuilder = new(cmd);
-            filter(queryFilterBuilder);
-
-            SqlDataReader rdr = queryFilterBuilder.GetCommandWithFilter().ExecuteReader();
-            while (rdr.Read())
-            {
-                articles.Add(new Article()
-                {
-                    Id = rdr.GetValueType<int>("Id"),
-                    Slug = rdr.GetValueType<string>("Slug"),
-                    Title = rdr.GetValueType<string>("Titulo"),
-                    CreatedOn = rdr.GetValueType<DateTime>("FechaCreacion")
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            return DbResult.Exception<List<Article>>("Exception");
-        }
-
-        return DbResult.Ok(articles);
-    }
-
     public DbResult<List<Article>> FindMultipleAdvanced(Action<QueryFilterBuilder> filter)
         => CreateAdvancedCommand("SELECT Id, Titulo, Slug, FechaCreacion FROM Articulos")
             .ApplyFilter(filter)
-            .GetList<Article>(x =>
-            {
-                x.Add("Id", "Id");
-                x.Add("Title", "Titulo");
-                x.Add("Slug", "Slug");
-                x.Add("CreatedOn", "FechaCreacion");
-            });
-
-    public DbResult<List<Article>> GetAll()
-        => CreateAdvancedCommand("SELECT Id, Titulo, Slug, FechaCreacion FROM Articulos")
-            .NoParameters()
             .GetList<Article>(x =>
             {
                 x.Add("Id", "Id");

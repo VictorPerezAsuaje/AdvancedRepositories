@@ -29,9 +29,8 @@ public class HomeController : Controller
         DbResult<List<Article>> articleResult = searchType switch
         {
             1 => _articleRepository.FindMultipleClassic(title),
-            2 => _articleRepository.FindMultipleBasic(x => x.ColumnName("Titulo").Like(title)),
-            3 => _articleRepository.FindMultipleAdvanced(x => x.ColumnName("Titulo").Like(title)),
-            4 => _fluentRepo.Select<Article>()
+            2 => _articleRepository.FindMultipleAdvanced(x => x.ColumnName("Titulo").Like(title)),
+            3 => _fluentRepo.Select<Article>()
                         .From("Articulos")
                         .AndWhere(x => x.ColumnName("Titulo").Like(title))
                         .GetList(x =>

@@ -15,7 +15,7 @@ public interface ISelectQuery
 
 public interface IFluentRepository : ISelectQuery { }
 
-public class FluentRepository : BaseRepository, IFluentRepository
+internal class FluentRepository : BaseRepository, IFluentRepository
 {
     public FluentRepository(BaseDatabaseConfiguration dbConfig) : base(dbConfig)
     {

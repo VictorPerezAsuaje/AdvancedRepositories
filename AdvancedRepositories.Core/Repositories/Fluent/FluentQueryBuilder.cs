@@ -54,7 +54,7 @@ public class FluentQueryBuilder<T> where T : class, new()
 
     internal SqlCommand BuildQuery(string conditions, string orderBy)
     {
-        _cmd.CommandText = $"{_overridenQueryFields ?? _queryFields} {_from} {conditions} {orderBy}";
+        _cmd.CommandText = $"{_overridenQueryFields ?? _queryFields} {_from} {conditions} {orderBy}".Trim();
         return _cmd;
     }
 
