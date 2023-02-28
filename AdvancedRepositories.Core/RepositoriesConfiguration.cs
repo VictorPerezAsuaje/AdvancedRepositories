@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using AdvancedRepositories.Core.Configuration;
+using AdvancedRepositories.Core.Repositories.Fluent;
 
 namespace AdvancedRepositories.Core;
 
@@ -11,6 +12,8 @@ public static class RepositoriesConfiguration
         databaseConfig(dbConfig);
 
         services.AddSingleton(dbConfig);
+
+        services.AddScoped<IFluentRepository, FluentRepository>();
 
         return services;
     }

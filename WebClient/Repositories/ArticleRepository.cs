@@ -6,7 +6,6 @@ using AdvancedRepositories.Core.Repositories.Advanced;
 namespace WebClient.Infrastructure;
 public interface IArticleRepository 
 {
-    DbResult<List<Article>> GetAllInTwoSteps();
     DbResult<List<Article>> GetAll();
     DbResult Insert(Article article);
 }
@@ -14,23 +13,6 @@ public interface IArticleRepository
 public class ArticleRepository : AdvancedRepository, IArticleRepository
 {
     public ArticleRepository(BaseDatabaseConfiguration dbConfig) : base(dbConfig){}
-
-    public DbResult<List<Article>> GetAllInTwoSteps()
-    {
-        var cmd = CreateAdvancedCommand("SELECT TOP(1) Id, Titulo, Slug, FechaCreacion FROM Articulos")
-        .NoParameters()
-        .GetAdvancedCommand();
-
-        /* Other configurations / commands */
-
-        return cmd.GetList<Article>(x =>
-        {
-            x.Add("Id", "Id");
-            x.Add("Title", "Titulo");
-            x.Add("Slug", "Slug");
-            x.Add("CreatedOn", "FechaCreacion");
-        }); 
-    }
 
     public DbResult<List<Article>> GetAll()
         => CreateAdvancedCommand("SELECT Id, Titulo, Slug, FechaCreacion FROM Articulos")
@@ -54,7 +36,11 @@ public class ArticleRepository : AdvancedRepository, IArticleRepository
             })
             .ExecuteScalar();
 
+        /* Add other commands / actions / IO before confirming the previous command */
+
         if(result.IsSuccess) SaveChanges();
+
+        /* Add other commands that may use the object returned from the insert */
 
         return result;
     }
