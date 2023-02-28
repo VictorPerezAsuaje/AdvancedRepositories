@@ -11,6 +11,9 @@
     <Product>AdvancedRepositories</Product>
     <Description>Class library created to ease the process of creating a repository with ADO.NET by providing middlewares, base classes, interfaces, etc.</Description>
     <PackageIcon>advanced-repositories-logo-128x128.jpg</PackageIcon>
+    <RepositoryUrl>https://github.com/VictorPerezAsuaje/AdvancedRepositories</RepositoryUrl>
+    <PackageTags>Repositories;ADO.NET;SQL;Database;NETCore</PackageTags>
+    <PackageId>AdvancedRepositories</PackageId>
   </PropertyGroup>
 
   <ItemGroup>
