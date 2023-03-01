@@ -15,10 +15,15 @@
     <PackageTags>Repositories;ADO.NET;SQL;Database;NETCore</PackageTags>
     <PackageId>AdvancedRepositories</PackageId>
     <Configurations>Debug;Release;PackNuget</Configurations>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
     <None Include="..\..\advanced-repositories-logo-128x128.jpg">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
