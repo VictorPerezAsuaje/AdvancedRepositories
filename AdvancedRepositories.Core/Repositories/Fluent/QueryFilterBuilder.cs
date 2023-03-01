@@ -1,10 +1,12 @@
-﻿using System.Data.SqlClient;
+﻿using AdvancedRepositories.Core.Extensions;
+using System.Data.SqlClient;
+using System.Text.RegularExpressions;
 
 namespace AdvancedRepositories.Core.Repositories.Fluent;
 
 public class QueryFilterBuilder
 {
-    SqlCommand _cmd { get; set; }
+    SqlCommand _cmd;
     int _ParamNumber => _cmd.Parameters.Count;
     string _Where = "";
 
@@ -22,7 +24,7 @@ public class QueryFilterBuilder
     void AddToWhere(string content)
     {
         _Where += $" {content} ";
-        _Where = _Where.Replace("  ", " ");
+        _Where = _Where.ClearMultipleSpaces();
     }
 
     public class Column
@@ -38,15 +40,24 @@ public class QueryFilterBuilder
             _Comparer = comparer;
         }
 
+        private string CreateSimpleComparer(string comparer)
+            => $" {_Comparer} {_Name} {comparer} @{_Name}{_Filter._ParamNumber}";
+
+        private void ComparerWithParams(string comparer, string assignedValue)
+        {
+            _Filter.AddToWhere(CreateSimpleComparer(comparer));
+            _Filter.AddParameterWithValue($"@{_Name}{_Filter._ParamNumber}", assignedValue);
+        }
+
         public QueryFilterBuilder Not(string valor)
         {
-            _Filter.AddToWhere($"{_Comparer} {_Name} NOT {valor}");
+            ComparerWithParams("NOT", valor);
             return _Filter;
         }
 
         public QueryFilterBuilder Is(string valor)
         {
-            _Filter.AddToWhere($"{_Comparer} {_Name} IS {valor}");
+            ComparerWithParams("IS", valor);
             return _Filter;
         }
 
@@ -58,7 +69,7 @@ public class QueryFilterBuilder
 
         public QueryFilterBuilder NotNull()
         {
-            _Filter.AddToWhere($"{_Comparer} {_Name} NOT NULL");
+            _Filter.AddToWhere($"{_Comparer} {_Name} IS NOT NULL");
             return _Filter;
         }
 
@@ -94,15 +105,6 @@ public class QueryFilterBuilder
 
             _Filter.AddToWhere($"{inValues} )");
             return _Filter;
-        }
-
-        private string CreateSimpleComparer(string comparer)
-            => $" {_Comparer} {_Name} {comparer} @{_Name}{_Filter._ParamNumber}";
-
-        private void ComparerWithParams(string comparer, string assignedValue)
-        {
-            _Filter.AddToWhere(CreateSimpleComparer(comparer));
-            _Filter.AddParameterWithValue($"@{_Name}{_Filter._ParamNumber}", assignedValue);
         }
 
         public QueryFilterBuilder Like(string assignedValue)
@@ -155,7 +157,7 @@ public class QueryFilterBuilder
 
         public QueryFilterBuilder GreaterOrEqualTo(string assignedValue)
         {
-            ComparerWithParams("=>", assignedValue);
+            ComparerWithParams(">=", assignedValue);
             return _Filter;
         }
 
@@ -169,7 +171,6 @@ public class QueryFilterBuilder
 
         return modifier;
     }
-
 
     public Column ColumnName(string column)
         => new Column(this, column, ModifierOrWhere());
@@ -220,14 +221,16 @@ public class QueryFilterBuilder
     }
 
     internal string ApplyAndCondition(string condition)
-        => $"{_Where} {condition.Replace("WHERE", "AND")} ";
+        => $"{_Where.ClearMultipleSpaces()} {condition.ClearMultipleSpaces().Replace("WHERE", "AND")} ";
 
     internal string ApplyOrCondition(string condition)
-        => $" {_Where} {condition.Replace("WHERE", "OR")} ";
+        => $" {_Where.ClearMultipleSpaces()} {condition.ClearMultipleSpaces().Replace("WHERE", "OR")} ";
 
     public SqlCommand GetCommandWithFilter()
     {
-        _cmd.CommandText += $" {_Where} ";
+        _cmd.CommandText += $" {GetCondition()} ";
         return _cmd;
     }
+
+    public string GetCondition() => _Where.ClearMultipleSpaces().Trim();
 }

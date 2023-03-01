@@ -2,7 +2,7 @@
 
 AdvancedRepositories born as a way to simplify the process of creating a repository with ADO.NET by providing middlewares, base classes, interfaces, etc.
 
-It also provides a way to not even need to even create one if all you want is filling a Data Transfer Object (DTO) data, by using the FluentRepository.
+It also provides a way to even avoid creating one altogether if all you want is filling a Data Transfer Object (DTO) data, by using the FluentRepository.
 
 | TABLE OF CONTENT |
 | ------ |

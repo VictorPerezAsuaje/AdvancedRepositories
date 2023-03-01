@@ -1,5 +1,5 @@
 ﻿using System.Data;
-
+using System.Text.RegularExpressions;
 
 namespace AdvancedRepositories.Core.Extensions;
 
@@ -15,4 +15,11 @@ public static class DataReaderExtensions
 
         return (T)reader[colName];
     }
+}
+
+internal static class StringExtensions
+{
+    internal static string ClearMultipleSpaces(this string stringToFormat)
+        => Regex.Replace(stringToFormat, @"\s+", " ");
+    
 }

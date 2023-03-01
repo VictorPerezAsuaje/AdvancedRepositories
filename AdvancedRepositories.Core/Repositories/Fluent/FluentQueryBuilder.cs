@@ -1,4 +1,5 @@
-﻿using FluentRepositories.Attributes;
+﻿using AdvancedRepositories.Core.Extensions;
+using FluentRepositories.Attributes;
 using System.Data.SqlClient;
 
 namespace AdvancedRepositories.Core.Repositories.Fluent;
@@ -54,7 +55,7 @@ public class FluentQueryBuilder<T> where T : class, new()
 
     internal SqlCommand BuildQuery(string conditions, string orderBy)
     {
-        _cmd.CommandText = $"{_overridenQueryFields ?? _queryFields} {_from} {conditions} {orderBy}".Trim();
+        _cmd.CommandText = $"{_overridenQueryFields ?? _queryFields} {_from} {conditions} {orderBy}".ClearMultipleSpaces();
         return _cmd;
     }
 
