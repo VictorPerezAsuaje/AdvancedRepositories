@@ -1,4 +1,5 @@
-﻿using FluentRepositories.Attributes;
+﻿using AdvancedRepositories.Core.Extensions;
+using FluentRepositories.Attributes;
 using System.Data.SqlClient;
 using System.Reflection;
 
@@ -92,15 +93,13 @@ public class QueryReady<T> where T : class, new()
             {
                 T item = new T();
 
-                foreach (PropertyInfo prop in typeof(T).GetProperties())
+                foreach (PropertyInfo prop in typeof(T).GetPropsWithCustomType<DatabaseColumn>())
                 {
-                    DatabaseColumn propAttr = prop.GetCustomAttribute(typeof(DatabaseColumn)) as DatabaseColumn;
-
-                    if (propAttr == null) continue;
+                    DatabaseColumn propAttr = prop.GetCustomAttribute<DatabaseColumn>();
 
                     if (!_queryBuilder.ContainsQueryField(propAttr.Name)) continue;
 
-                    prop.SetValue(item, rdr[propAttr.Name], null);
+                    prop.SetValue(item, rdr.GetValueType(prop.PropertyType, propAttr.Name));
                 }
 
                 list.Add(item);
@@ -134,13 +133,11 @@ public class QueryReady<T> where T : class, new()
                 foreach (PropertyInfo prop in typeof(T).GetProperties())
                 {
                     string propertyName = prop.Name;
+
                     if (!map.TryGetValue(propertyName, out string dbPropName))
                         continue;
 
-                    Type type = prop.PropertyType;
-                    object value = rdr[dbPropName];
-
-                    prop.SetValue(item, Convert.ChangeType(value, prop.PropertyType), null);
+                    prop.SetValue(item, rdr.GetValueType(prop.PropertyType, dbPropName));
                 }
 
                 list.Add(item);
@@ -154,91 +151,7 @@ public class QueryReady<T> where T : class, new()
         return DbResult.Ok(list);
     }
 
-    public DbResult<List<T>> GetByFieldName(string columnName, object columnValue)
-    {
-        List<T> list = new List<T>();
-
-        try
-        {
-            if (!_queryBuilder.ContainsQueryFields)
-                throw new ArgumentNullException("No database fields specified. \nYou have to  specify fields on the Select<T>( -- Your fields here -- ) and use a generic action, for instance, GetList(). \nOtherwise, leave generic Select<T>() and specify them at the selected action, for instance, GetList(x => { -- Your fields here -- }).");
-
-            _conditions += $" {(_conditions.Contains("WHERE") ? "AND" : "WHERE")} AND {columnName} = @fieldValue ";            
-
-            SqlCommand cmd = _CommandWithQuery;
-            cmd.Parameters.AddWithValue("@fieldValue", columnValue);
-
-            SqlDataReader rdr = cmd.ExecuteReader();
-            while (rdr.Read())
-            {
-                T item = new T();
-
-                foreach (PropertyInfo prop in typeof(T).GetProperties())
-                {
-                    DatabaseColumn propAttr = prop.GetCustomAttribute(typeof(DatabaseColumn)) as DatabaseColumn;
-
-                    if (propAttr == null) continue;
-
-                    if (!_queryBuilder.ContainsQueryField(propAttr.Name)) continue;
-
-                    prop.SetValue(item, rdr[propAttr.Name], null);
-                }
-
-                list.Add(item);
-            }
-        }
-        catch (Exception ex)
-        {
-            return DbResult.Exception<List<T>>("There was an exception while getting the items.", ex);
-        }
-
-        return DbResult.Ok(list);
-    }
-
-    public DbResult<List<T>> GetByFieldName(Action<Dictionary<string, string>> propertyDbNamePair, string columnName, object columnValue)
-    {
-        List<T> list = new List<T>();
-
-        try
-        {
-            Dictionary<string, string> map = new Dictionary<string, string>();
-            propertyDbNamePair(map);
-
-            _queryBuilder.ReplaceQueryFieldsWithMappedFields(map.Values.ToList());
-
-            _conditions += $" {(_conditions.Contains("WHERE") ? "AND" : "WHERE")} AND {columnName} = @fieldValue ";
-
-            SqlCommand cmd = _CommandWithQuery;
-            cmd.Parameters.AddWithValue("@fieldValue", columnValue);
-
-            SqlDataReader rdr = cmd.ExecuteReader();
-            while (rdr.Read())
-            {
-                T item = new T();
-
-                foreach (PropertyInfo prop in typeof(T).GetProperties())
-                {
-                    DatabaseColumn propAttr = prop.GetCustomAttribute(typeof(DatabaseColumn)) as DatabaseColumn;
-
-                    if (propAttr == null) continue;
-
-                    if (!_queryBuilder.ContainsQueryField(propAttr.Name)) continue;
-
-                    prop.SetValue(item, rdr[propAttr.Name], null);
-                }
-
-                list.Add(item);
-            }
-        }
-        catch (Exception ex)
-        {
-            return DbResult.Exception<List<T>>("There was an exception while getting the items.", ex);
-        }
-
-        return DbResult.Ok(list);
-    }
-
-    public DbResult<T> GetOneById(string columnIdName, object columnIdValue)
+    public DbResult<T> GetOne()
     {
         T item = null;
 
@@ -247,27 +160,21 @@ public class QueryReady<T> where T : class, new()
             if (!_queryBuilder.ContainsQueryFields)
                 throw new ArgumentNullException("No database fields specified. \nYou have to  specify fields on the Select<T>( -- Your fields here -- ) and use a generic action, for instance, GetList(). \nOtherwise, leave generic Select<T>() and specify them at the selected action, for instance, GetList(x => { -- Your fields here -- }).");
 
-            _conditions += $" {(_conditions.Contains("WHERE") ? "AND" : "WHERE")} {columnIdName} = @fieldValue ";
-
-            SqlCommand cmd = _CommandWithQuery;
-            cmd.Parameters.AddWithValue("@fieldValue", columnIdValue);
-
-            SqlDataReader rdr = cmd.ExecuteReader();
+            SqlDataReader rdr = _CommandWithQuery.ExecuteReader();
             while (rdr.Read())
             {
-                if (item != null) return DbResult.Ok(item);
+                if (item != null) 
+                    return DbResult.Fail<T>("The query returned more than one item with the criteria specified");
 
                 item = new T();
-                foreach (PropertyInfo prop in typeof(T).GetProperties())
-                {
-                    DatabaseColumn propAttr = prop.GetCustomAttribute(typeof(DatabaseColumn)) as DatabaseColumn;
 
-                    if (propAttr == null) continue;
+                foreach (PropertyInfo prop in typeof(T).GetPropsWithCustomType<DatabaseColumn>())
+                {
+                    DatabaseColumn propAttr = prop.GetCustomAttribute<DatabaseColumn>();
 
                     if (!_queryBuilder.ContainsQueryField(propAttr.Name)) continue;
 
-
-                    prop.SetValue(item, rdr[propAttr.Name], null);
+                    prop.SetValue(item, rdr.GetValueType(prop.PropertyType, propAttr.Name));
                 }
             }
         }
@@ -276,10 +183,12 @@ public class QueryReady<T> where T : class, new()
             return DbResult.Exception<T>("There was an exception while getting the item.", ex);
         }
 
+        if (item == null) return DbResult.Fail<T>("There was no item that matched the criteria specified");
+
         return DbResult.Ok(item);
     }
 
-    public DbResult<T> GetOneById(Action<Dictionary<string, string>> propertyDbNamePair, string columnIdName, object columnIdValue)
+    public DbResult<T> GetOne(Action<Dictionary<string, string>> propertyDbNamePair)
     {
         T item = null;
 
@@ -290,27 +199,22 @@ public class QueryReady<T> where T : class, new()
 
             _queryBuilder.ReplaceQueryFieldsWithMappedFields(map.Values.ToList());
 
-            _conditions += $" {(_conditions.Contains("WHERE") ? "AND" : "WHERE")} {columnIdName} = @fieldValue ";
-
-            SqlCommand cmd = _CommandWithQuery;
-            cmd.Parameters.AddWithValue("@fieldValue", columnIdValue);
-
-            SqlDataReader rdr = cmd.ExecuteReader();
+            SqlDataReader rdr = _CommandWithQuery.ExecuteReader();
             while (rdr.Read())
             {
-                if (item != null) return DbResult.Ok(item);
+                if (item != null) 
+                    return DbResult.Fail<T>("The query returned more than one item with the criteria specified");
 
                 item = new T();
+
                 foreach (PropertyInfo prop in typeof(T).GetProperties())
                 {
-                    DatabaseColumn propAttr = prop.GetCustomAttribute(typeof(DatabaseColumn)) as DatabaseColumn;
+                    string propertyName = prop.Name;
 
-                    if (propAttr == null) continue;
+                    if (!map.TryGetValue(propertyName, out string dbPropName))
+                        continue;
 
-                    if (!_queryBuilder.ContainsQueryField(propAttr.Name)) continue;
-
-
-                    prop.SetValue(item, rdr[propAttr.Name], null);
+                    prop.SetValue(item, rdr.GetValueType(prop.PropertyType, dbPropName));
                 }
             }
         }
@@ -319,7 +223,9 @@ public class QueryReady<T> where T : class, new()
             return DbResult.Exception<T>("There was an exception while getting the item.", ex);
         }
 
-        return DbResult.Ok(item);
+        if(item == null) return DbResult.Fail<T>("There was no item that matched the criteria specified");
+
+        return  DbResult.Ok(item);
     }
 }
 

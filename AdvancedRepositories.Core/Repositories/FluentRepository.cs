@@ -6,6 +6,7 @@ using System.Reflection;
 
 namespace AdvancedRepositories.Core.Repositories.Fluent;
 
+// It's internal because it should only have FluentRepository as its implementation for the singleton, otherwise it could be implemented on another class and it may cause an exception due to not being able to find the appropriate service
 internal interface IFluentRepository : ISelectQuery {
     DbResult<List<T>> AutoList<T>(Action<QueryFilterBuilder>? filterConfig = null) where T : class, new();
 }
@@ -47,7 +48,7 @@ public sealed class FluentRepository : BaseRepository, IFluentRepository
             {
                 T item = new T();
 
-                foreach (PropertyInfo prop in typeof(T).GetProperties().OfCustomType<DatabaseColumn>())
+                foreach (PropertyInfo prop in typeof(T).GetPropsWithCustomType<DatabaseColumn>())
                 {
                     DatabaseColumn propAttr = prop.GetCustomAttribute<DatabaseColumn>();
                     prop.SetValue(item, rdr[propAttr.Name], null);

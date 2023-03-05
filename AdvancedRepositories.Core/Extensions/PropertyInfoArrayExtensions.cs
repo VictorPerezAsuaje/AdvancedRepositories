@@ -2,8 +2,8 @@
 
 namespace AdvancedRepositories.Core.Extensions;
 
-internal static class PropertyInfoArrayExtensions
+internal static class TypeExtensions
 {
-    internal static IEnumerable<PropertyInfo> OfCustomType<T>(this PropertyInfo[] props)
-        => props.Where(x => x.GetCustomAttribute(typeof(T)) is T);
+    internal static IEnumerable<PropertyInfo> GetPropsWithCustomType<T>(this Type type)
+        => type.GetProperties().Where(x => x.GetCustomAttribute(typeof(T)) is T);
 }

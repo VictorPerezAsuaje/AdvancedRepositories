@@ -17,6 +17,12 @@ public class FluentQueryBuilder<T> where T : class, new()
         .Replace("SELECT", "").Replace("DISTINCT", "").Trim()
         .Length > 0;
 
+    // Work in progress
+    internal bool ValidateQuery()
+    {
+        return true;
+    }
+
     public FluentQueryBuilder(SqlCommand cmd)
     {
         _cmd = cmd;
@@ -55,7 +61,8 @@ public class FluentQueryBuilder<T> where T : class, new()
         return new QueryReady<T>(this);
     }
 
-    public QueryReady<T> From(string table, string alias, Action<FluentView<T>> viewConfig)
+    // Work in progress
+    internal QueryReady<T> From(string table, string alias, Action<FluentView<T>> viewConfig)
     {
         _from = $" FROM {table} {(!string.IsNullOrWhiteSpace(alias) ? $"AS {alias}" : "")} ";
         FluentView<T> view = new FluentView<T>(viewConfig);

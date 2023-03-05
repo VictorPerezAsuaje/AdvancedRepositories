@@ -13,6 +13,7 @@ public interface IArticleRepository
     DbResult<List<Article>> FindAdvanced(Action<QueryFilterBuilder> filter);
     DbResult Insert(Article article);
     DbResult Update(Article article, int id);
+    DbResult Delete(int id);
 }
 
 public class ArticleRepository : AdvancedRepository, IArticleRepository
@@ -91,20 +92,15 @@ public class ArticleRepository : AdvancedRepository, IArticleRepository
     }
 
     public DbResult Update(Article article, int id)
-    {
-        DbResult result = UpdateFrom("Articulos")
+        => UpdateFrom("Articulos")
             .FieldValues(
                 ("Titulo", article.Title),
                 ("Slug", article.Title.Replace(" ", "-")))
-            .Where(x => x.ColumnName("Id").EqualTo("10"))
+            .Where(x => x.ColumnName("Id").EqualTo(id.ToString()))
             .Execute();
 
-        /* Add other commands / actions / IO before confirming the previous command */
-
-        if (result.IsSuccess) SaveChanges();
-
-        /* Add other commands that may use the object returned from the insert */
-
-        return result;
-    }
+    public DbResult Delete(int id)
+        => DeleteFrom("Articulos")
+        .Where(x => x.ColumnName("Id").EqualTo(id.ToString()))
+        .Execute();
 }

@@ -30,7 +30,6 @@ public abstract class AdvancedRepository : BaseRepository
     protected FluentQueryBuilder<T> Select<T>() where T : class, new()
         => new FluentQueryBuilder<T>(CreateCommand($"SELECT {FieldsFromAttributesOf<T>()} "));
 
-
     protected FluentQueryBuilder<T> SelectDistinct<T>() where T : class, new()
         => new FluentQueryBuilder<T>(CreateCommand($"SELECT DISTINCT {FieldsFromAttributesOf<T>()} "));
 
@@ -154,4 +153,3 @@ public abstract class AdvancedRepository : BaseRepository
         }
     }
 }
-

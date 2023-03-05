@@ -24,7 +24,7 @@ public abstract class BaseRepository : IDisposable
     {
         string queryFields = "";
 
-        foreach (PropertyInfo prop in typeof(T).GetProperties().OfCustomType<DatabaseColumn>())
+        foreach (PropertyInfo prop in typeof(T).GetPropsWithCustomType<DatabaseColumn>())
         {
             DatabaseColumn propAttr = prop.GetCustomAttribute<DatabaseColumn>();
             queryFields += $"{(string.IsNullOrWhiteSpace(queryFields) ? "" : ",")} {propAttr.Name}";
