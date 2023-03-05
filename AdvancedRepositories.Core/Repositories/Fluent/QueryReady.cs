@@ -147,9 +147,7 @@ public class QueryReady<T> where T : class, new()
 
                 foreach (PropertyInfo prop in typeof(T).GetProperties())
                 {
-                    string propertyName = prop.Name;
-
-                    if (!map.TryGetValue(propertyName, out string dbPropName))
+                    if (!map.TryGetValue(prop.Name, out string dbPropName))
                         continue;
 
                     prop.SetValue(item, rdr.GetValueType(prop.PropertyType, dbPropName));
@@ -225,9 +223,7 @@ public class QueryReady<T> where T : class, new()
 
                 foreach (PropertyInfo prop in typeof(T).GetProperties())
                 {
-                    string propertyName = prop.Name;
-
-                    if (!map.TryGetValue(propertyName, out string dbPropName))
+                    if (!map.TryGetValue(prop.Name, out string dbPropName))
                         continue;
 
                     prop.SetValue(item, rdr.GetValueType(prop.PropertyType, dbPropName));

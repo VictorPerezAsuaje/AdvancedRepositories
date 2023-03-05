@@ -1,4 +1,5 @@
-﻿using AdvancedRepositories.Core.Repositories.Fluent;
+﻿using AdvancedRepositories.Core.Repositories;
+using AdvancedRepositories.Core.Repositories.Fluent;
 using Microsoft.AspNetCore.Mvc;
 using WebClient.Models;
 
@@ -14,13 +15,15 @@ public class TagSelectViewComponent : ViewComponent
 
     public async Task<IViewComponentResult> InvokeAsync()
     {
-        //List<TagDTO> list = _fluentRepository.Select<TagDTO>()
+        //DbResult<List<TagDTO>> result = _fluentRepository.Select<TagDTO>()
         //    .FromDefaultTable()
         //    .OrderByDesc("Name")
-        //    .GetList().Value;
+        //    .GetList(x => x.Add("Name", "Nombre"));
 
-        List<TagDTO> unorderedList = _fluentRepository.AutoList<TagDTO>().Value;
+        DbResult<List<TagDTO>> result = _fluentRepository.AutoList<TagDTO>();
 
-        return View(unorderedList);
+        if (result.IsFailure) return View(new List<TagDTO>());
+
+        return View(result.Value);
     }
 }
