@@ -7,9 +7,14 @@ It also provides a way to even avoid creating one altogether if all you want is 
 | TABLE OF CONTENT |
 | ------ |
 | [Initial Setup](#initial-setup) | 
+| [Note about DbResult](#note-about-dbresult) | 
 | [Using IFluentRepository](#using-ifluentrepository) | 
 | &nbsp;&nbsp;&nbsp;&nbsp;[Attributes + IFluentRepository](#attributes-ifluentrepository) | 
 | [Inheriting from AdvancedRepository](#inheriting-from-advancedrepository) | 
+| &nbsp;&nbsp;&nbsp;&nbsp;[Create](#create) | 
+| &nbsp;&nbsp;&nbsp;&nbsp;[Update](#update) | 
+| &nbsp;&nbsp;&nbsp;&nbsp;[Delete](#delete) | 
+| &nbsp;&nbsp;&nbsp;&nbsp;[Classic vs Advanced Read](#classic-vs-advanced-read) | 
 | [QueryFilterBuilder](#QueryFilterBuilder) | 
 
 
@@ -35,7 +40,75 @@ It also provides a way to even avoid creating one altogether if all you want is 
     });
 ```
 
+Alternatively you can specify your connection manually:
+```sh
+  builder.Services.AddRepositoriesConfiguration(c => c.AddConnectionStringManually("{YOUR-CONNECTION-STRING}"));
+```
+
 3. Now you can either create your repositories by inheriting from the AdvancedRepository class or use the IFluentRepository interface to retrieve data.
+
+### Note about DbResult
+
+The DbResult class will be used everywhere in the project and examples. It allows you to check whether or not the request successfully completed. It can be both typed and untyped.
+
+```sh
+  // Typed 
+  public DbResult<Article> GetOne();
+
+  // Untyped
+  public DbResult Update();
+```
+
+It does not matter if it's typed or not, you will have 3 possible results (that you can extend if you want and create your own if you feel like it):
+
+```sh
+
+  // The request was successfull
+  DbResult.Ok()
+  DbResult.Ok<T>(/* T instance */)
+
+  // The request failed
+  DbResult.Fail("Error related to failure")
+  DbResult.Fail<T>("Error related to failure")
+
+  // There was an exception in the request
+  DbResult.Exception("Error related to exception", /* Exception instance */)
+  DbResult.Exception<T>("Error related to failure", /* Exception instance */)
+
+```
+
+You can check if the query was successful or not by using the "IsSuccess" and "IsFailure" properties. If the query was successful, you will end up with content of the type that you specify between the "<>", so you can access it through the .Value property.
+
+If it was a failure, you can get the error message with the "Error" property.
+
+```sh
+    public DbResult<int> ReturnOne() => DbResult.Ok(1);
+
+    public void AnotherMethod()
+    {
+        DbResult<int> result = ReturnOne();
+
+        if(result.IsSuccess) 
+            Console.WriteLine($"Value: {result.Value}"); // Value: 1
+        else
+            Console.WriteLine($"Something went wrong: {result.Error}");
+
+    }
+    
+```
+
+You can even check the type of the DbResult when it fails, so you can control exceptions and log them wherever you want:
+
+```sh
+
+    if(result.Type == DbResultType.Exception){
+        string error = result.Error;
+        Exception ex = result.ExceptionContent;
+
+        /* And now feel free to log it as you see fit */
+    }
+        
+```
 
 ### Using IFluentRepository
 
@@ -72,12 +145,7 @@ DbResult<List<TagDTO>> result = _fluentRepo.Select<TagDTO>()
         // x.Add("ClassPropertyName", "DatabaseField");
         x.Add("Id", "Id");
         x.Add("Name", "Nombre");
-    });
-```
 
-The DbResult class allows you to check whether or not the request successfully completed. If so, you will end up with a list of your desired class (in this case a TagDTO) that you can access through the .Value property, otherwise, you will get an error message with an exception you can log.
-
-```sh
 if(!result.IsSuccess){
     // Log the error by using result.Error or result.ExceptionContent depending on the type of failure
     return;
@@ -85,6 +153,7 @@ if(!result.IsSuccess){
 
 List<TagDTO> tags = result.Value;
 ```
+
 
 #### Attributes + IFluentRepository
 
@@ -108,6 +177,16 @@ So now we can replicate the previous sample query as follows:
 DbResult<List<TagDTO>> result = _fluentRepo.Select<TagDTO>().FromDefaultTable().GetList();
 ```
 
+And if you literally do not need any specify order and you have applied the aforementioned attributes:
+```sh
+// Without conditions
+DbResult<List<TagDTO>> result = _fluentRepository.AutoList<TagDTO>();
+
+// With [QueryFilterBuilder](#QueryFilterBuilder) conditions
+DbResult<List<TagDTO>> result = _fluentRepository.AutoList<TagDTO>(x => /* Your conditions here */ );
+
+```
+
 
 ### Inheriting from AdvancedRepository
 
@@ -125,97 +204,148 @@ public class Article
 }
 ```
 
-I will also create an interface that contains two Read methods to contrast the classic way to get data with ADO.NET vs using the AdvancedRepository, as well as an Insert method as a representative example of other CRUD actions.
+Let's define your typical CRUD repository. The only difference is that I'll add two "Find" methods, to exemplify the difference between the classic way to get data with ADO.NET vs using the AdvancedRepository (which uses ADO.NET under the hood as well).
 
 ```sh
 public interface IArticleRepository 
 {
-    DbResult<List<Article>> FindMultipleClassic(string title);
-    DbResult<List<Article>> FindMultipleAdvanced(Action<QueryFilterBuilder> filter);
+    // Read - Classic 
+    DbResult<List<Article>> FindClassic(string title);
+
+    // Read - "Advanced" 
+    DbResult<List<Article>> FindAdvanced(Action<QueryFilterBuilder> filter);
+
     DbResult Insert(Article article);
+    DbResult Update(Article article, int id);
+    DbResult Delete(int id);
 }
 ```
+
+Let's also assume the following Repository class:
 
 ```sh
 public class ArticleRepository : AdvancedRepository, IArticleRepository
 {
     public ArticleRepository(BaseDatabaseConfiguration dbConfig) : base(dbConfig){}
 
-    // "Usual" way of setting up a find/get data with filters
-    public DbResult<List<Article>> FindMultipleClassic(string title)
+    /* All the crud methods from the interface we are going to see below */
+}
+```
+
+#### Create
+
+For this example, I have considered that maybe you might need the Id of the inserted item for other commands. In this case you can use ExecuteScalar() as shown below:
+
+```sh
+    public DbResult Insert(Article article)
     {
-        List<Article> articles = new List<Article>();        
+        DbResult<object> result = InsertInto("Articulos")
+            .FieldValues(
+                ("Titulo", article.Title), 
+                ("Slug", article.Title.Replace(" ", "-")), 
+                ("FechaCreacion", DateTime.Now))             
+            .ExecuteScalar();
 
-        try
-        {
-            using(SqlConnection con = new SqlConnection("{YOUR-CONNECTION-STRING}"))
-            {
-                con.Open();
-                SqlCommand cmd = new SqlCommand();
-                cmd.Connection = con;
+        /* Add other commands / actions / IO you want them to occur during the same transaction but don't depend on the Id returned from the Insert */
 
-                cmd.CommandText = "SELECT Id, Titulo, Slug, FechaCreacion FROM Articulos";
+        if (result.IsSuccess) SaveChanges();
 
-                if(!string.IsNullOrWhiteSpace(title))
-                {
-                    cmd.CommandText += " WHERE Titulo LIKE @Title";
-                    cmd.Parameters.AddWithValue("@Title", "%"+title+"%");
-                }
+        /* Add other commands that may use the object returned from the insert */
 
-                SqlDataReader rdr = cmd.ExecuteReader();
-                while (rdr.Read())
-                {
-                    articles.Add(new Article()
-                    {
-                        Id = rdr.GetValueType<int>("Id"),
-                        Slug = rdr.GetValueType<string>("Slug"),
-                        Title = rdr.GetValueType<string>("Titulo"),
-                        CreatedOn = rdr.GetValueType<DateTime>("FechaCreacion")
-                    });
-                }
-            }            
-        }
-        catch (Exception ex)
-        {
-            return DbResult.Exception<List<Article>>("Exception");
-        }
-
-        return DbResult.Ok(articles);
+        return result;
     }
-    
-     // "Advanced" way of setting up a find/get data with filters
-    public DbResult<List<Article>> FindMultipleAdvanced(Action<QueryFilterBuilder> filter)
-        => CreateAdvancedCommand("SELECT Id, Titulo, Slug, FechaCreacion FROM Articulos")
-            .ApplyFilter(filter)
-            .GetList<Article>(x =>
+```
+
+#### Update
+You can use the [QueryFilterBuilder](#QueryFilterBuilder) to specify a condition.
+
+```sh
+    public DbResult Update(Article article, int id)
+        => UpdateFrom("Articulos")
+            .FieldValues(
+                ("Titulo", article.Title),
+                ("Slug", article.Title.Replace(" ", "-")))
+            .Where(x => x.ColumnName("Id").EqualTo(id.ToString()))
+            .Execute();
+```
+
+#### Delete
+
+Just as the Update one, you can use the [QueryFilterBuilder](#QueryFilterBuilder) to specify a condition.
+
+```sh
+    public DbResult Delete(int id)
+        => DeleteFrom("Articulos")
+        .Where(x => x.ColumnName("Id").EqualTo(id.ToString()))
+        .Execute();
+```
+
+#### Classic vs Advanced Read
+
+This is a typical Find method (that also uses the BaseRepository commodities):
+
+```sh
+// "Usual" way of setting up a find/get data with filters
+public DbResult<List<Article>> FindMultipleClassic(string title)
+{
+    List<Article> articles = new List<Article>();        
+
+    try
+    {
+        using(SqlConnection con = new SqlConnection("{YOUR-CONNECTION-STRING}"))
+        {
+            con.Open();
+            SqlCommand cmd = new SqlCommand();
+            cmd.Connection = con;
+
+            cmd.CommandText = "SELECT Id, Titulo, Slug, FechaCreacion FROM Articulos";
+
+            if(!string.IsNullOrWhiteSpace(title))
+            {
+                cmd.CommandText += " WHERE Titulo LIKE @Title";
+                cmd.Parameters.AddWithValue("@Title", "%"+title+"%");
+            }
+
+            SqlDataReader rdr = cmd.ExecuteReader();
+            while (rdr.Read())
+            {
+                articles.Add(new Article()
+                {
+                    Id = rdr.GetValueType<int>("Id"),
+                    Slug = rdr.GetValueType<string>("Slug"),
+                    Title = rdr.GetValueType<string>("Titulo"),
+                    CreatedOn = rdr.GetValueType<DateTime>("FechaCreacion")
+                });
+            }
+        }            
+    }
+    catch (Exception ex)
+    {
+        return DbResult.Exception<List<Article>>("Exception");
+    }
+
+    return DbResult.Ok(articles);
+}
+```
+
+And this would be the same but "Advanced":
+
+```sh
+// "Advanced" way of setting up a find/get data with filters
+public DbResult<List<Article>> FindMultipleAdvanced(Action<QueryFilterBuilder> filter)
+    => Select<Article>("Id", "Titulo", "Slug", "FechaCreacion")
+            .From("Articulos")
+            .Where(filter)
+            .GetList(x =>
             {
                 x.Add("Id", "Id");
                 x.Add("Title", "Titulo");
                 x.Add("Slug", "Slug");
                 x.Add("CreatedOn", "FechaCreacion");
             });
-
-    public DbResult Insert(Article article)
-    {
-        DbResult<object> result = CreateAdvancedCommand("INSERT INTO Articulos (Titulo, Slug, FechaCreacion) OUTPUT Inserted.ID VALUES (@Titulo, @Slug, @FechaCreacion)")
-            .WithParameters(x =>
-            {
-                x.Add("@Titulo", article.Title);
-                x.Add("@Slug", article.Title.Replace(" ", "-"));
-                x.Add("@FechaCreacion", DateTime.Now);
-            })
-            .ExecuteScalar();
-
-        /* Add other commands / actions / IO before confirming the previous command */
-
-        if(result.IsSuccess) SaveChanges(); // Applies all commands until this point
-
-        /* Add other commands that may need to use the object returned from the insert */
-
-        return result;
-    }
-}
 ```
+
+This is obviously subjective, but you have more semantic way of doing the same things with methods that resemble SQL.
 
 ### QueryFilterBuilder
 
