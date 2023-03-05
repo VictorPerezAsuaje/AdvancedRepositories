@@ -79,6 +79,13 @@ public class QueryReady<T> where T : class, new()
 
     /* Possible actions */
 
+    /// <summary>
+    /// <para>Method to return a list of items of type T implicitly based on the attributes [DefaultTable] and [ColumnName]. </para>
+    /// 
+    /// <para>You must have at least one [ColumnName] attribute on a property of the T type, otherwise it returns an ArgumentNullException. The same happens if you do not define the [DefaultTable] attribute for the class.</para>
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="ArgumentNullException"></exception>
     public DbResult<List<T>> GetList()
     {
         List<T> list = new List<T>();
@@ -92,6 +99,7 @@ public class QueryReady<T> where T : class, new()
             while (rdr.Read())
             {
                 T item = new T();
+                bool hasProperties = false;
 
                 foreach (PropertyInfo prop in typeof(T).GetPropsWithCustomType<DatabaseColumn>())
                 {
@@ -100,9 +108,10 @@ public class QueryReady<T> where T : class, new()
                     if (!_queryBuilder.ContainsQueryField(propAttr.Name)) continue;
 
                     prop.SetValue(item, rdr.GetValueType(prop.PropertyType, propAttr.Name));
+                    hasProperties = true;
                 }
 
-                list.Add(item);
+                if (hasProperties) list.Add(item);
             }
         }
         catch(Exception ex)
@@ -114,6 +123,11 @@ public class QueryReady<T> where T : class, new()
         return DbResult.Ok(list);
     }
 
+    /// <summary>
+    /// <para>Method to return a list of items of type T with explicit specifications on the fields you want to query. </para>
+    /// </summary>
+    /// <param name="propertyDbNamePair"></param>
+    /// <returns></returns>
     public DbResult<List<T>> GetList(Action<Dictionary<string, string>> propertyDbNamePair)
     {
         List<T> list = new List<T>();
@@ -129,6 +143,7 @@ public class QueryReady<T> where T : class, new()
             while (rdr.Read())
             {
                 T item = new T();
+                bool hasProperties = false;
 
                 foreach (PropertyInfo prop in typeof(T).GetProperties())
                 {
@@ -138,9 +153,10 @@ public class QueryReady<T> where T : class, new()
                         continue;
 
                     prop.SetValue(item, rdr.GetValueType(prop.PropertyType, dbPropName));
+                    hasProperties = true;
                 }
 
-                list.Add(item);
+                if(hasProperties) list.Add(item);
             }
         }
         catch (Exception ex)
