@@ -1,0 +1,11 @@
+﻿@model List<TagDTO>
+<div class="mb-3 px-3">
+    <label class="form-label">Tag</label>
+    <select class="form-select" name="Tag">
+                <option selected>-- Select --</option>
+    @foreach (TagDTO tag in Model)
+    {
+        <option value="@tag.Id">@tag.Name</option>
+    }
+    </select>
+</div>

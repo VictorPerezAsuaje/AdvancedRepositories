@@ -12,6 +12,16 @@ public class FluentQueryBuilder<T> where T : class, new()
     string _queryFields;
     string? _overridenQueryFields;
     string _top;
+    internal bool ContainsQueryFields
+        => (_overridenQueryFields ?? _queryFields)
+        .Replace("SELECT", "").Replace("DISTINCT", "").Trim()
+        .Length > 0;
+
+    public FluentQueryBuilder(SqlCommand cmd)
+    {
+        _cmd = cmd;
+        _queryFields = cmd.CommandText;
+    }
 
     public FluentQueryBuilder(SqlCommand cmd, string queryFields)
     {
@@ -53,23 +63,21 @@ public class FluentQueryBuilder<T> where T : class, new()
         return new QueryReady<T>(this);
     }
 
-    internal SqlCommand BuildQuery(string conditions, string orderBy)
+    internal string BuildQuery(string conditions, string orderBy) 
+        => $"{_overridenQueryFields ?? _queryFields} {_from} {conditions} {orderBy}".ClearMultipleSpaces();
+
+    internal SqlCommand GetCommandWithQuery(string conditions, string orderBy)
     {
-        _cmd.CommandText = $"{_overridenQueryFields ?? _queryFields} {_from} {conditions} {orderBy}".ClearMultipleSpaces();
+        _cmd.CommandText = BuildQuery(conditions, orderBy);
         return _cmd;
     }
 
     internal bool ContainsQueryField(string fieldName)
         => (_overridenQueryFields ?? _queryFields).Contains(fieldName);
     
-    internal bool ContainsQueryFields()
-        => (_overridenQueryFields ?? _queryFields)
-        .Replace("SELECT", "").Replace("DISTINCT", "").Trim()
-        .Length > 0;
-
     internal void ReplaceQueryFieldsWithMappedFields(List<string> dbFields)
     {
-        if (dbFields.Count == 0 && !ContainsQueryFields())
+        if (dbFields.Count == 0 && !ContainsQueryFields)
             throw new ArgumentNullException("No database fields specified. \nYou have to specify fields on the Select<T>( -- Your fields here -- ) and use a generic action, for instance, GetList(). \nOtherwise, leave generic Select<T>() and specify them at the selected action, for instance, GetList(x => { -- Your fields here -- }).");
 
         string rewrittenQuery = "SELECT ";

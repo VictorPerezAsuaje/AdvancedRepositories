@@ -1,77 +1,78 @@
 ﻿using AdvancedRepositories.Core.Configuration;
+using AdvancedRepositories.Core.Extensions;
 using FluentRepositories.Attributes;
-using FluentRepositories;
+using System.Data.SqlClient;
 using System.Reflection;
 
 namespace AdvancedRepositories.Core.Repositories.Fluent;
 
-public interface ISelectQuery
-{
-    FluentQueryBuilder<T> Select<T>(params string[] fields) where T : class, new();
-    FluentQueryBuilder<T> SelectDistinct<T>(params string[] fields) where T : class, new();
-    FluentQueryBuilder<T> Select<T>() where T : class, new();
-    FluentQueryBuilder<T> SelectDistinct<T>() where T : class, new();
+internal interface IFluentRepository : ISelectQuery {
+    DbResult<List<T>> AutoList<T>(Action<QueryFilterBuilder>? filterConfig = null) where T : class, new();
 }
 
-public interface IFluentRepository : ISelectQuery { }
-
-internal class FluentRepository : BaseRepository, IFluentRepository
+public sealed class FluentRepository : BaseRepository, IFluentRepository
 {
     public FluentRepository(BaseDatabaseConfiguration dbConfig) : base(dbConfig)
     {
     }
 
-    public FluentQueryBuilder<T> Select<T>(params string[] fields) where T : class, new()
+    public DbResult<List<T>> AutoList<T>(Action<QueryFilterBuilder>? filterConfig = null) where T : class, new()
     {
-        string queryFields = "";
+        List<T> list = new List<T>();
 
-        foreach (string field in fields)
+        try
         {
-            queryFields += $"{(string.IsNullOrWhiteSpace(queryFields) ? "" : ",")} {field}";
+            string queryFields = FieldsFromAttributesOf<T>();
+
+            if (string.IsNullOrWhiteSpace(queryFields))
+                throw new ArgumentNullException($"The class {typeof(T).Name} does not have any [DatabaseColumn] attribute defined.");
+
+            DefaultTable? tableAttr = Attribute.GetCustomAttribute(typeof(T), typeof(DefaultTable)) as DefaultTable;
+
+            if (tableAttr == null) 
+                throw new ArgumentNullException($"The class {typeof(T).Name} does not have a [DefaultTable] attribute defined.");
+
+            SqlCommand cmd = CreateCommand($"SELECT {queryFields} FROM {tableAttr.Name} ");
+
+            if(filterConfig != null)
+            {
+                var filter = new QueryFilterBuilder(cmd);
+                filterConfig(filter);
+                cmd = filter.GetCommandWithFilter();
+            }        
+
+        
+            SqlDataReader rdr = cmd.ExecuteReader();
+            while (rdr.Read())
+            {
+                T item = new T();
+
+                foreach (PropertyInfo prop in typeof(T).GetProperties().OfCustomType<DatabaseColumn>())
+                {
+                    DatabaseColumn propAttr = prop.GetCustomAttribute<DatabaseColumn>();
+                    prop.SetValue(item, rdr[propAttr.Name], null);
+                }
+
+                list.Add(item);
+            }
+        }
+        catch (Exception ex)
+        {
+            return DbResult.Exception<List<T>>("There was an exception while getting the items.", ex);
         }
 
-        return new FluentQueryBuilder<T>(CreateCommand(""), $"SELECT {queryFields} ");
+        return DbResult.Ok(list);
     }
+
+    public FluentQueryBuilder<T> Select<T>(params string[] fields) where T : class, new()
+        => new FluentQueryBuilder<T>(CreateCommand($"SELECT {FieldsFromMappedFields(fields)} "));
 
     public FluentQueryBuilder<T> SelectDistinct<T>(params string[] fields) where T : class, new()
-    {
-        string queryFields = "";
-
-        foreach (string field in fields)
-        {
-            queryFields += $"{(string.IsNullOrWhiteSpace(queryFields) ? "" : ",")} {field}";
-        }
-
-        return new FluentQueryBuilder<T>(CreateCommand(""), $"SELECT DISTINCT {queryFields} ");
-    }
+        => new FluentQueryBuilder<T>(CreateCommand($"SELECT DISTINCT {FieldsFromMappedFields(fields)} "));
 
     public FluentQueryBuilder<T> Select<T>() where T : class, new()
-    {
-        string queryFields = "";
-
-        foreach (PropertyInfo prop in typeof(T).GetProperties())
-        {
-            DatabaseColumn propAttr = prop.GetCustomAttribute(typeof(DatabaseColumn)) as DatabaseColumn;
-            if (propAttr == null) continue;
-
-            queryFields += $"{(string.IsNullOrWhiteSpace(queryFields) ? "" : ",")} {propAttr.Name}";
-        }
-
-        return new FluentQueryBuilder<T>(CreateCommand(""), $"SELECT {queryFields} ");
-    }    
+        => new FluentQueryBuilder<T>(CreateCommand($"SELECT {FieldsFromAttributesOf<T>()} "));
 
     public FluentQueryBuilder<T> SelectDistinct<T>() where T : class, new()
-    {
-        string queryFields = "";
-
-        foreach (PropertyInfo prop in typeof(T).GetProperties())
-        {
-            DatabaseColumn propAttr = prop.GetCustomAttribute(typeof(DatabaseColumn)) as DatabaseColumn;
-            if (propAttr == null) continue;
-
-            queryFields += $"{(string.IsNullOrWhiteSpace(queryFields) ? "" : ",")} {propAttr.Name}";
-        }
-
-        return new FluentQueryBuilder<T>(CreateCommand(), $"SELECT DISTINCT {queryFields} ");
-    }
+        => new FluentQueryBuilder<T>(CreateCommand($"SELECT DISTINCT {FieldsFromAttributesOf<T>()} "));
 }

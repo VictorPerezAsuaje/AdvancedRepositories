@@ -1,9 +1,19 @@
 ﻿using AdvancedRepositories.Core.Configuration;
 using AdvancedRepositories.Core.Repositories.Fluent;
 using System.Data.SqlClient;
-using System.Reflection;
 
 namespace AdvancedRepositories.Core.Repositories.Advanced;
+
+public abstract class AdvancedCommand
+{
+    protected SqlCommand _cmd;
+
+    public AdvancedCommand(SqlCommand cmd)
+    {
+        _cmd = cmd;
+    }
+}
+
 
 public abstract class AdvancedRepository : BaseRepository
 {
@@ -11,63 +21,104 @@ public abstract class AdvancedRepository : BaseRepository
     {
     }
 
-    protected AdvancedCommand CreateAdvancedCommand(string query = "")
+    protected FluentQueryBuilder<T> Select<T>(params string[] fields) where T : class, new()
+        => new FluentQueryBuilder<T>(CreateCommand($"SELECT {FieldsFromMappedFields(fields)} "));
+
+    protected FluentQueryBuilder<T> SelectDistinct<T>(params string[] fields) where T : class, new()
+        => new FluentQueryBuilder<T>(CreateCommand($"SELECT DISTINCT {FieldsFromMappedFields(fields)} "));
+
+    protected FluentQueryBuilder<T> Select<T>() where T : class, new()
+        => new FluentQueryBuilder<T>(CreateCommand($"SELECT {FieldsFromAttributesOf<T>()} "));
+
+
+    protected FluentQueryBuilder<T> SelectDistinct<T>() where T : class, new()
+        => new FluentQueryBuilder<T>(CreateCommand($"SELECT DISTINCT {FieldsFromAttributesOf<T>()} "));
+
+    protected InsertCommand InsertInto(string table)
+        => new InsertCommand(CreateCommand($"INSERT INTO {table} "));
+
+    public class InsertCommand : AdvancedCommand
     {
-        if(string.IsNullOrWhiteSpace(query)) 
-            throw new ArgumentNullException("The query can not be null nor empty.");
-
-        SqlCommand cmd = new SqlCommand(query, _con, _transaction);
-        return new AdvancedCommand(cmd, this);
-    }
-
-    public class AdvancedCommand
-    {
-        AdvancedRepository _advancedRepository;
-        SqlCommand _cmd;
-
-        public AdvancedCommand(SqlCommand cmd, AdvancedRepository advancedRepository)
+        string _Fields = "";
+        string _Values = "";
+        public InsertCommand(SqlCommand cmd) : base(cmd)
         {
-            _cmd = cmd;
-            _advancedRepository = advancedRepository;
         }
 
-        SqlCommand FillParameters(SqlCommand cmd, Action<Dictionary<string, object>> sqlParameters)
+        public AdvancedCommandReady FieldValues(params (string field, object value)[] parameters)
         {
-            Dictionary<string, object> parameters = new();
-            if (sqlParameters != null) sqlParameters(parameters);
-
-            foreach (var parameter in parameters)
+            for (int i = 0; i < parameters.Length; i++)
             {
-                cmd.Parameters.AddWithValue(parameter.Key, parameter.Value);
+                _Fields += $"{(i == 0 ? parameters[i].field : $", {parameters[i].field}")}";
+                _Values += $"{(i == 0 ? "" : $", ")}@{parameters[i].field}";
+                _cmd.Parameters.AddWithValue(parameters[i].field, parameters[i].value);
             }
 
-            return cmd;
+            _cmd.CommandText += $" ({_Fields}) VALUES ({_Values})";
+
+            return new AdvancedCommandReady(_cmd);
         }
 
-        public AdvancedCommandReady WithParameters(Action<Dictionary<string, object>> sqlParameters = null)
+    }
+
+    protected UpdateCommand UpdateFrom(string table)
+        => new UpdateCommand(CreateCommand($"UPDATE {table} SET "));
+
+    public class UpdateCommand : AdvancedCommand
+    {
+        string _FieldValues = "";
+        public UpdateCommand(SqlCommand cmd) : base(cmd)
         {
-            FillParameters(_cmd, sqlParameters);
-            return new AdvancedCommandReady(_cmd, _advancedRepository);
         }
 
-        public AdvancedCommandReady NoParameters() => new AdvancedCommandReady(_cmd, _advancedRepository);
-
-        public AdvancedCommandReady ApplyFilter(Action<QueryFilterBuilder> filterConfig)
+        public UpdateCommand FieldValues(params (string field, object value)[] parameters)
         {
-            QueryFilterBuilder filterBuilder = new QueryFilterBuilder(_cmd, filterConfig);
-            return new AdvancedCommandReady(filterBuilder.GetCommandWithFilter(), _advancedRepository);
+            if (!string.IsNullOrWhiteSpace(_FieldValues)) return this;
+
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                _FieldValues += $"{(i == 0 ? "" : ",")} {parameters[i].field} = @{parameters[i].field}";
+                _cmd.Parameters.AddWithValue(parameters[i].field, parameters[i].value);
+            }
+
+            _cmd.CommandText += _FieldValues;
+
+            return this;
+        }
+
+        public AdvancedCommandReady Where(Action<QueryFilterBuilder> filterConfig)
+        {
+            QueryFilterBuilder filter = new(_cmd);
+            filterConfig(filter);
+            _cmd = filter.GetCommandWithFilter();
+            return new AdvancedCommandReady(_cmd);
+        }
+    }
+
+    protected DeleteCommand DeleteFrom(string table)
+        => new DeleteCommand(CreateCommand($"DELETE {table} "));
+    public class DeleteCommand : AdvancedCommand
+    {
+        public DeleteCommand(SqlCommand cmd) : base(cmd)
+        {
+        }
+
+        public AdvancedCommandReady Where(Action<QueryFilterBuilder> filterConfig)
+        {
+            QueryFilterBuilder filter = new(_cmd);
+            filterConfig(filter);
+            _cmd = filter.GetCommandWithFilter();
+            return new AdvancedCommandReady(_cmd);
         }
     }
 
     public class AdvancedCommandReady
     {
-        AdvancedRepository _advancedRepository;
         SqlCommand _cmd;
 
-        public AdvancedCommandReady(SqlCommand cmd, AdvancedRepository advancedRepository)
+        public AdvancedCommandReady(SqlCommand cmd)
         {
             _cmd = cmd;
-            _advancedRepository = advancedRepository;
         }
 
         public DbResult Execute()
@@ -88,6 +139,8 @@ public abstract class AdvancedRepository : BaseRepository
         {
             object obj = null;
 
+            _cmd.CommandText = _cmd.CommandText.Replace(") VALUES (", ") OUTPUT Inserted.ID VALUES (");
+
             try
             {
                 obj = _cmd.ExecuteScalar();
@@ -99,83 +152,6 @@ public abstract class AdvancedRepository : BaseRepository
 
             return DbResult.Ok(obj);
         }
-
-        public DbResult<List<T>> GetList<T>(Action<Dictionary<string, string>> propertyDbNamePair) where T : class, new()
-        {
-            Dictionary<string, string> map = new Dictionary<string, string>();
-            propertyDbNamePair(map);
-
-            List<T> list = new List<T>();
-
-            try
-            {
-                SqlDataReader rdr = _cmd.ExecuteReader();
-
-                while (rdr.Read())
-                {
-                    T obj = new T();
-
-                    foreach (PropertyInfo p in typeof(T).GetProperties())
-                    {
-                        string propertyName = p.Name;
-                        if (!map.TryGetValue(propertyName, out string dbPropName))
-                            continue;
-
-                        Type type = p.PropertyType;
-                        object value = rdr[dbPropName];
-
-                        p.SetValue(obj, Convert.ChangeType(value, p.PropertyType), null);
-                    }
-
-                    list.Add(obj);
-                }
-            }
-            catch (Exception ex)
-            {
-                return DbResult.Exception<List<T>>("There was an exception while trying to retrieve the data.", ex);
-            }
-
-            return DbResult.Ok(list);
-        }
-
-        public DbResult<T> GetOneOrDefault<T>(Action<Dictionary<string, string>> propertyDbNamePair) where T : class, new()
-        {
-            Dictionary<string, string> map = new Dictionary<string, string>();
-            propertyDbNamePair(map);
-
-            T obj = null;
-
-            try
-            {
-                SqlDataReader rdr = _cmd.ExecuteReader();
-
-                while (rdr.Read())
-                {
-                    obj = new T();
-
-                    foreach (PropertyInfo p in typeof(T).GetProperties())
-                    {
-                        string propertyName = p.Name;
-                        string dbPropName = "";
-                        if (!map.TryGetValue(propertyName, out dbPropName))
-                            continue;
-
-                        Type type = p.PropertyType;
-                        object value = rdr[dbPropName];
-
-                        p.SetValue(obj, Convert.ChangeType(value, p.PropertyType), null);
-                    }
-
-                    return DbResult.Ok(obj);
-                }
-            }
-            catch (Exception ex)
-            {
-                return DbResult.Exception<T>("There was an exception while trying to retrieve the data.", ex);
-            }
-
-            return DbResult.Ok(obj ?? default);
-        }
-
     }
 }
+

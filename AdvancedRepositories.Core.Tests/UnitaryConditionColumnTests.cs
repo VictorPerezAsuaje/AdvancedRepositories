@@ -69,7 +69,7 @@ public class UnitaryConditionColumnTests
     public void NotNull_OneParameter_Success()
     {
         // Given
-        string expectedQuery = "WHERE Id NOT NULL";
+        string expectedQuery = "WHERE Id IS NOT NULL";
         SqlCommand cmdToFill = new();
         QueryFilterBuilder builder = new(cmdToFill);
 

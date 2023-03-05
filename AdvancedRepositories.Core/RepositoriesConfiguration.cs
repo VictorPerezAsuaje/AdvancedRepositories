@@ -12,8 +12,7 @@ public static class RepositoriesConfiguration
         databaseConfig(dbConfig);
 
         services.AddSingleton(dbConfig);
-
-        services.AddScoped<IFluentRepository, FluentRepository>();
+        services.AddSingleton(new FluentRepository(dbConfig));
 
         return services;
     }

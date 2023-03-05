@@ -1,5 +1,4 @@
 ﻿using FluentRepositories.Attributes;
-using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Reflection;
 
@@ -10,27 +9,20 @@ public class QueryReady<T> where T : class, new()
     FluentQueryBuilder<T> _queryBuilder;
     string _conditions = "";
     string _orderBy = "";
+    SqlCommand _CommandWithQuery => _queryBuilder.GetCommandWithQuery(_conditions, _orderBy);
+    public string GetBuiltQuery() => _queryBuilder.BuildQuery(_conditions, _orderBy);
 
     internal QueryReady(FluentQueryBuilder<T> queryBuilder)
     {
         _queryBuilder = queryBuilder;
     }
 
-    public QueryReady<T> AndWhere(Action<QueryFilterBuilder> filterConfig)
+    public QueryReady<T> Where(Action<QueryFilterBuilder> filterConfig)
     {
         var filter = new QueryFilterBuilder(_queryBuilder._cmd);
         filterConfig(filter);
 
         _conditions = filter.ApplyAndCondition(_conditions);
-        return this;
-    }
-
-    public QueryReady<T> OrWhere(Action<QueryFilterBuilder> filterConfig)
-    {
-        var filter = new QueryFilterBuilder(_queryBuilder._cmd);
-        filterConfig(filter);
-
-        _conditions = filter.ApplyOrCondition(_conditions);
         return this;
     }
 
@@ -48,7 +40,7 @@ public class QueryReady<T> where T : class, new()
 
     public QueryReady<T> OrderByDesc(string columnName)
     {
-        if (string.IsNullOrWhiteSpace(_orderBy)) return this;
+        if (!string.IsNullOrWhiteSpace(_orderBy)) return this;
         if (!ColumnExist(columnName)) return this;
 
         _orderBy = $" ORDER BY {columnName} DESC ";
@@ -57,7 +49,7 @@ public class QueryReady<T> where T : class, new()
 
     public QueryReady<T> OrderBy(string columnName)
     {
-        if (string.IsNullOrWhiteSpace(_orderBy)) return this;
+        if (!string.IsNullOrWhiteSpace(_orderBy)) return this;
         if (!ColumnExist(columnName)) return this;
 
         _orderBy = $" ORDER BY {columnName} ASC ";
@@ -92,10 +84,10 @@ public class QueryReady<T> where T : class, new()
 
         try
         {
-            if(!_queryBuilder.ContainsQueryFields())
+            if(!_queryBuilder.ContainsQueryFields)
                 throw new ArgumentNullException("No database fields specified. \nYou have to  specify fields on the Select<T>( -- Your fields here -- ) and use a generic action, for instance, GetList(). \nOtherwise, leave generic Select<T>() and specify them at the selected action, for instance, GetList(x => { -- Your fields here -- }).");
 
-            SqlDataReader rdr = _queryBuilder.BuildQuery(_conditions, _orderBy).ExecuteReader();
+            SqlDataReader rdr = _CommandWithQuery.ExecuteReader();
             while (rdr.Read())
             {
                 T item = new T();
@@ -134,7 +126,7 @@ public class QueryReady<T> where T : class, new()
 
             _queryBuilder.ReplaceQueryFieldsWithMappedFields(map.Values.ToList());
 
-            SqlDataReader rdr = _queryBuilder.BuildQuery(_conditions, _orderBy).ExecuteReader();
+            SqlDataReader rdr = _CommandWithQuery.ExecuteReader();
             while (rdr.Read())
             {
                 T item = new T();
@@ -168,12 +160,12 @@ public class QueryReady<T> where T : class, new()
 
         try
         {
-            if (!_queryBuilder.ContainsQueryFields())
+            if (!_queryBuilder.ContainsQueryFields)
                 throw new ArgumentNullException("No database fields specified. \nYou have to  specify fields on the Select<T>( -- Your fields here -- ) and use a generic action, for instance, GetList(). \nOtherwise, leave generic Select<T>() and specify them at the selected action, for instance, GetList(x => { -- Your fields here -- }).");
 
             _conditions += $" {(_conditions.Contains("WHERE") ? "AND" : "WHERE")} AND {columnName} = @fieldValue ";            
 
-            SqlCommand cmd = _queryBuilder.BuildQuery(_conditions, _orderBy);
+            SqlCommand cmd = _CommandWithQuery;
             cmd.Parameters.AddWithValue("@fieldValue", columnValue);
 
             SqlDataReader rdr = cmd.ExecuteReader();
@@ -216,7 +208,7 @@ public class QueryReady<T> where T : class, new()
 
             _conditions += $" {(_conditions.Contains("WHERE") ? "AND" : "WHERE")} AND {columnName} = @fieldValue ";
 
-            SqlCommand cmd = _queryBuilder.BuildQuery(_conditions, _orderBy);
+            SqlCommand cmd = _CommandWithQuery;
             cmd.Parameters.AddWithValue("@fieldValue", columnValue);
 
             SqlDataReader rdr = cmd.ExecuteReader();
@@ -252,12 +244,12 @@ public class QueryReady<T> where T : class, new()
 
         try
         {
-            if (!_queryBuilder.ContainsQueryFields())
+            if (!_queryBuilder.ContainsQueryFields)
                 throw new ArgumentNullException("No database fields specified. \nYou have to  specify fields on the Select<T>( -- Your fields here -- ) and use a generic action, for instance, GetList(). \nOtherwise, leave generic Select<T>() and specify them at the selected action, for instance, GetList(x => { -- Your fields here -- }).");
 
             _conditions += $" {(_conditions.Contains("WHERE") ? "AND" : "WHERE")} {columnIdName} = @fieldValue ";
 
-            SqlCommand cmd = _queryBuilder.BuildQuery(_conditions, _orderBy);
+            SqlCommand cmd = _CommandWithQuery;
             cmd.Parameters.AddWithValue("@fieldValue", columnIdValue);
 
             SqlDataReader rdr = cmd.ExecuteReader();
@@ -300,7 +292,7 @@ public class QueryReady<T> where T : class, new()
 
             _conditions += $" {(_conditions.Contains("WHERE") ? "AND" : "WHERE")} {columnIdName} = @fieldValue ";
 
-            SqlCommand cmd = _queryBuilder.BuildQuery(_conditions, _orderBy);
+            SqlCommand cmd = _CommandWithQuery;
             cmd.Parameters.AddWithValue("@fieldValue", columnIdValue);
 
             SqlDataReader rdr = cmd.ExecuteReader();

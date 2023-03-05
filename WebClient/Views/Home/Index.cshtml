@@ -39,16 +39,8 @@
             <label class="form-label">Title</label>
             <input class="form-control" name="Title">
         </div>
-        <div class="mb-3 px-3">
-            <label class="form-label">Tag</label>
-            <select class="form-select" name="Tag">
-                <option selected>-- Select --</option>
-                @foreach(TagDTO tag in Model.Tags)
-                {
-                    <option value="@tag.Id">@tag.Name</option>
-                }
-            </select>
-        </div>
+        
+        <vc:tag-select></vc:tag-select>
 
         <div class="card-footer text-end">
             <button type="submit" class="btn btn-primary">INSERT</button>

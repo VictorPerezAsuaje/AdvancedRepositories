@@ -9,16 +9,17 @@ using AdvancedRepositories.Core.Extensions;
 namespace WebClient.Infrastructure;
 public interface IArticleRepository 
 {
-    DbResult<List<Article>> FindMultipleClassic(string title);
-    DbResult<List<Article>> FindMultipleAdvanced(Action<QueryFilterBuilder> filter);
+    DbResult<List<Article>> FindClassic(string title);
+    DbResult<List<Article>> FindAdvanced(Action<QueryFilterBuilder> filter);
     DbResult Insert(Article article);
+    DbResult Update(Article article, int id);
 }
 
 public class ArticleRepository : AdvancedRepository, IArticleRepository
 {
     public ArticleRepository(BaseDatabaseConfiguration dbConfig) : base(dbConfig){}
 
-    public DbResult<List<Article>> FindMultipleClassic(string title)
+    public DbResult<List<Article>> FindClassic(string title)
     {
         List<Article> articles = new List<Article>();        
 
@@ -58,10 +59,12 @@ public class ArticleRepository : AdvancedRepository, IArticleRepository
 
         return DbResult.Ok(articles);
     }
-    public DbResult<List<Article>> FindMultipleAdvanced(Action<QueryFilterBuilder> filter)
-        => CreateAdvancedCommand("SELECT Id, Titulo, Slug, FechaCreacion FROM Articulos")
-            .ApplyFilter(filter)
-            .GetList<Article>(x =>
+
+    public DbResult<List<Article>> FindAdvanced(Action<QueryFilterBuilder> filter)
+        => Select<Article>("Id", "Titulo", "Slug", "FechaCreacion")
+            .From("Articulos")
+            .Where(filter)
+            .GetList(x =>
             {
                 x.Add("Id", "Id");
                 x.Add("Title", "Titulo");
@@ -71,18 +74,34 @@ public class ArticleRepository : AdvancedRepository, IArticleRepository
 
     public DbResult Insert(Article article)
     {
-        DbResult<object> result = CreateAdvancedCommand("INSERT INTO Articulos (Titulo, Slug, FechaCreacion) OUTPUT Inserted.ID VALUES (@Titulo, @Slug, @FechaCreacion)")
-            .WithParameters(x =>
-            {
-                x.Add("@Titulo", article.Title);
-                x.Add("@Slug", article.Title.Replace(" ", "-"));
-                x.Add("@FechaCreacion", DateTime.Now);
-            })
+        DbResult<object> result = InsertInto("Articulos")
+            .FieldValues(
+                ("Titulo", article.Title), 
+                ("Slug", article.Title.Replace(" ", "-")), 
+                ("FechaCreacion", DateTime.Now))             
             .ExecuteScalar();
 
         /* Add other commands / actions / IO before confirming the previous command */
 
-        if(result.IsSuccess) SaveChanges();
+        if (result.IsSuccess) SaveChanges();
+
+        /* Add other commands that may use the object returned from the insert */
+
+        return result;
+    }
+
+    public DbResult Update(Article article, int id)
+    {
+        DbResult result = UpdateFrom("Articulos")
+            .FieldValues(
+                ("Titulo", article.Title),
+                ("Slug", article.Title.Replace(" ", "-")))
+            .Where(x => x.ColumnName("Id").EqualTo("10"))
+            .Execute();
+
+        /* Add other commands / actions / IO before confirming the previous command */
+
+        if (result.IsSuccess) SaveChanges();
 
         /* Add other commands that may use the object returned from the insert */
 
