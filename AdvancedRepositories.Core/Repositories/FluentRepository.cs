@@ -51,7 +51,7 @@ public sealed class FluentRepository : BaseRepository, IFluentRepository
                 foreach (PropertyInfo prop in typeof(T).GetPropsWithCustomType<DatabaseColumn>())
                 {
                     DatabaseColumn propAttr = prop.GetCustomAttribute<DatabaseColumn>();
-                    prop.SetValue(item, rdr.GetValueType(prop.PropertyType, propAttr.Name), null);
+                    prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, propAttr.Name), null);
                 }
 
                 list.Add(item);

@@ -17,4 +17,12 @@ public static class DataReaderExtensions
 
         return (T)reader[colName];
     }
+
+    public static object TypeOrNull(this IDataReader reader, Type type, string colName)
+    {
+        if (reader[colName] == DBNull.Value)
+            return null;
+
+        return Convert.ChangeType(reader[colName], type);
+    }
 }

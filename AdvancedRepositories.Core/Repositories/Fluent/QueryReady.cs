@@ -107,7 +107,7 @@ public class QueryReady<T> where T : class, new()
 
                     if (!_queryBuilder.ContainsQueryField(propAttr.Name)) continue;
 
-                    prop.SetValue(item, rdr.GetValueType(prop.PropertyType, propAttr.Name));
+                    prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, propAttr.Name));
                     hasProperties = true;
                 }
 
@@ -150,7 +150,7 @@ public class QueryReady<T> where T : class, new()
                     if (!map.TryGetValue(prop.Name, out string dbPropName))
                         continue;
 
-                    prop.SetValue(item, rdr.GetValueType(prop.PropertyType, dbPropName));
+                    prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, dbPropName));
                     hasProperties = true;
                 }
 
@@ -188,7 +188,7 @@ public class QueryReady<T> where T : class, new()
 
                     if (!_queryBuilder.ContainsQueryField(propAttr.Name)) continue;
 
-                    prop.SetValue(item, rdr.GetValueType(prop.PropertyType, propAttr.Name));
+                    prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, propAttr.Name));
                 }
             }
         }
@@ -226,7 +226,7 @@ public class QueryReady<T> where T : class, new()
                     if (!map.TryGetValue(prop.Name, out string dbPropName))
                         continue;
 
-                    prop.SetValue(item, rdr.GetValueType(prop.PropertyType, dbPropName));
+                    prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, dbPropName));
                 }
             }
         }

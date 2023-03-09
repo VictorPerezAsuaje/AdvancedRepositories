@@ -314,7 +314,7 @@ public DbResult<List<Article>> FindMultipleClassic(string title)
                     Id = rdr.GetValueType<int>("Id"),
                     Slug = rdr.GetValueType<string>("Slug"),
                     Title = rdr.GetValueType<string>("Titulo"),
-                    CreatedOn = rdr.GetValueType<DateTime>("FechaCreacion")
+                    CreatedOn = rdr.TypeOrNull<DateTime>("FechaCreacion")
                 });
             }
         }            

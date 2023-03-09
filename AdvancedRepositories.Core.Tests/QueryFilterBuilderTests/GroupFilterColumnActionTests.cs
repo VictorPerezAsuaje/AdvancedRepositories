@@ -2,7 +2,7 @@
 using FluentAssertions;
 using System.Data.SqlClient;
 
-namespace AdvancedRepositories.Core.Tests;
+namespace AdvancedRepositories.Core.Tests.QueryFilterBuilderTests;
 
 // Naming convention [MethodUnderTest]_[Scenario]_[ExpectedResult]
 public class GroupFilterColumnActionTests
@@ -17,10 +17,12 @@ public class GroupFilterColumnActionTests
 
         // When
         builder
-            .GroupFilter(x => {
+            .GroupFilter(x =>
+            {
                 x.Add(y => y.ColumnName("Id").NotNull().And("Price").LessOrEqualTo("500"));
             })
-            .OrGroupFilter(x => {
+            .OrGroupFilter(x =>
+            {
                 x.Add(y => y.ColumnName("Id").EqualTo("1").And("Name").Like("Victor"));
             });
 
@@ -44,10 +46,12 @@ public class GroupFilterColumnActionTests
 
         // When
         builder
-            .GroupFilter(x => {
+            .GroupFilter(x =>
+            {
                 x.Add(y => y.ColumnName("Id").NotNull().And("Price").LessOrEqualTo("500"));
             })
-            .AndGroupFilter(x => {
+            .AndGroupFilter(x =>
+            {
                 x.Add(y => y.ColumnName("Id").EqualTo("1").And("Name").Like("Victor"));
             });
 
@@ -71,7 +75,8 @@ public class GroupFilterColumnActionTests
 
         // When
         builder
-            .GroupFilter(x => {
+            .GroupFilter(x =>
+            {
                 x.Add(y =>
                     y.GroupFilter(z =>
                         z.Add(a => a.ColumnName("Id").EqualTo("1").And("Name").Like("Chair")))
@@ -82,7 +87,8 @@ public class GroupFilterColumnActionTests
 
                 x.Add(y => y.And("Quantity").GreaterThan("1"));
             })
-            .OrGroupFilter(x => {
+            .OrGroupFilter(x =>
+            {
                 x.Add(y => y.ColumnName("Price").NotNull().And("Price").LessOrEqualTo("500"));
             });
 

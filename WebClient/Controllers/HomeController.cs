@@ -9,12 +9,14 @@ namespace WebClient.Controllers;
 public class HomeController : Controller
 {
     IArticleRepository _articleRepository;
+    IArticleTypedRepository _articleTypedRepository;
     FluentRepository _fluentRepo;
 
-    public HomeController(IArticleRepository articleRepository, FluentRepository fluentRepository)
+    public HomeController(IArticleRepository articleRepository, FluentRepository fluentRepository, IArticleTypedRepository articleTypedRepository)
     {
         _articleRepository = articleRepository;
         _fluentRepo = fluentRepository;
+        _articleTypedRepository = articleTypedRepository;
     }
 
     [HttpGet]
@@ -39,6 +41,7 @@ public class HomeController : Controller
                             x.Add("Slug", "Slug");
                             x.Add("CreatedOn", "FechaCreacion");
                         }),
+            4 => _articleTypedRepository.FindAdvanced(x => x.ColumnName("Titulo").Like(title))
         };
 
         if(articleResult.IsSuccess)

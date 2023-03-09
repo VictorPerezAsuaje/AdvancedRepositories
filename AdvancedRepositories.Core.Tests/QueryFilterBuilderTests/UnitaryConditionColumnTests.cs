@@ -2,7 +2,7 @@ using AdvancedRepositories.Core.Repositories.Fluent;
 using FluentAssertions;
 using System.Data.SqlClient;
 
-namespace AdvancedRepositories.Core.Tests;
+namespace AdvancedRepositories.Core.Tests.QueryFilterBuilderTests;
 
 // Naming convention [MethodUnderTest]_[Scenario]_[ExpectedResult]
 
@@ -101,7 +101,7 @@ public class UnitaryConditionColumnTests
         result.Should().NotBeNullOrWhiteSpace();
         result.Should().BeEquivalentTo(expectedQuery);
 
-        parameters.Select(x => x.ParameterName).Should().Equal("@Id0","@Id1", "@Id2", "@Id3");
+        parameters.Select(x => x.ParameterName).Should().Equal("@Id0", "@Id1", "@Id2", "@Id3");
         parameters.Select(x => x.Value).Should().Equal("1", "2", "3", "4");
     }
 

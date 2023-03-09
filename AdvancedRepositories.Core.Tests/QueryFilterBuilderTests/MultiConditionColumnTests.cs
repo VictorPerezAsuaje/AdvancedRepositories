@@ -2,7 +2,7 @@
 using FluentAssertions;
 using System.Data.SqlClient;
 
-namespace AdvancedRepositories.Core.Tests;
+namespace AdvancedRepositories.Core.Tests.QueryFilterBuilderTests;
 
 public class MultiConditionColumnTests
 {
@@ -42,7 +42,7 @@ public class MultiConditionColumnTests
         // Then
         result.Should().NotBeNullOrWhiteSpace();
         result.Should().BeEquivalentTo(expectedQuery);
-        parameters.Select(x => x.ParameterName).Should().Equal("@Id0", "@Id1", "@Id2", "@Id3","@Name4");
+        parameters.Select(x => x.ParameterName).Should().Equal("@Id0", "@Id1", "@Id2", "@Id3", "@Name4");
         parameters.Select(x => x.Value).Should().Equal("1", "2", "3", "4", "Victor");
     }
 }

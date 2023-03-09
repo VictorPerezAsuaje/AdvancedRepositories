@@ -4,27 +4,33 @@ using System.Data.SqlClient;
 
 namespace AdvancedRepositories.Core.Repositories.Advanced;
 
-
-public abstract class AdvancedRepository : BaseRepository
+public abstract class AdvancedTypedRepository<T> : BaseRepository where T : class, new()
 {
-    protected AdvancedRepository(BaseDatabaseConfiguration dbConfig) : base(dbConfig)
+    protected abstract string _TableName { get; }
+    protected AdvancedTypedRepository(BaseDatabaseConfiguration dbConfig) : base(dbConfig)
     {
     }
 
-    protected FluentQueryBuilder<T> Select<T>(params string[] fields) where T : class, new()
-        => new FluentQueryBuilder<T>(CreateCommand($"SELECT {FieldsFromMappedFields(fields)} "));
+    protected QueryReady<T> Select(params string[] fields) 
+        => new FluentQueryBuilder<T>(CreateCommand($"SELECT {FieldsFromMappedFields(fields)} ")).From(_TableName);
 
-    protected FluentQueryBuilder<T> SelectDistinct<T>(params string[] fields) where T : class, new()
-        => new FluentQueryBuilder<T>(CreateCommand($"SELECT DISTINCT {FieldsFromMappedFields(fields)} "));
+    protected QueryReady<T> SelectTop(int number, params string[] fields)
+        => new FluentQueryBuilder<T>(CreateCommand($"SELECT {FieldsFromMappedFields(fields)} ")).Top(number).From(_TableName);
 
-    protected FluentQueryBuilder<T> Select<T>() where T : class, new()
-        => new FluentQueryBuilder<T>(CreateCommand($"SELECT {FieldsFromAttributesOf<T>()} "));
+    protected QueryReady<T> SelectDistinct(params string[] fields)
+        => new FluentQueryBuilder<T>(CreateCommand($"SELECT DISTINCT {FieldsFromMappedFields(fields)} ")).From(_TableName);
 
-    protected FluentQueryBuilder<T> SelectDistinct<T>() where T : class, new()
-        => new FluentQueryBuilder<T>(CreateCommand($"SELECT DISTINCT {FieldsFromAttributesOf<T>()} "));
+    protected QueryReady<T> Select() 
+        => new FluentQueryBuilder<T>(CreateCommand($"SELECT {FieldsFromAttributesOf<T>()} ")).From(_TableName);
 
-    protected InsertCommand InsertInto(string table)
-        => new InsertCommand(CreateCommand($"INSERT INTO {table} "));
+    protected QueryReady<T> SelectTop(int number)
+        => new FluentQueryBuilder<T>(CreateCommand($"SELECT {FieldsFromAttributesOf<T>()} ")).Top(number).From(_TableName);
+
+    protected QueryReady<T> SelectDistinct() 
+        => new FluentQueryBuilder<T>(CreateCommand($"SELECT DISTINCT {FieldsFromAttributesOf<T>()} ")).From(_TableName);
+
+    protected InsertCommand Insert()
+        => new InsertCommand(CreateCommand($"INSERT INTO {_TableName} "));
 
     public class InsertCommand : AdvancedCommand
     {
@@ -50,8 +56,8 @@ public abstract class AdvancedRepository : BaseRepository
 
     }
 
-    protected UpdateCommand UpdateFrom(string table)
-        => new UpdateCommand(CreateCommand($"UPDATE {table} SET "));
+    protected UpdateCommand Update()
+        => new UpdateCommand(CreateCommand($"UPDATE {_TableName} SET "));
 
     public class UpdateCommand : AdvancedCommand
     {
@@ -84,8 +90,8 @@ public abstract class AdvancedRepository : BaseRepository
         }
     }
 
-    protected DeleteCommand DeleteFrom(string table)
-        => new DeleteCommand(CreateCommand($"DELETE {table} "));
+    protected DeleteCommand Delete()
+        => new DeleteCommand(CreateCommand($"DELETE {_TableName} "));
     public class DeleteCommand : AdvancedCommand
     {
         public DeleteCommand(SqlCommand cmd) : base(cmd)

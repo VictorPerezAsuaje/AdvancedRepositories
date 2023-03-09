@@ -6,6 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddScoped<IArticleRepository, ArticleRepository>();
+builder.Services.AddScoped<IArticleTypedRepository, ArticleTypedRepository>();
 builder.Services.AddRepositoriesConfiguration(c =>
 {
     c.Server = "(localdb)\\MSSQLLocalDB";
