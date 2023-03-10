@@ -27,22 +27,9 @@ public class QueryReady<T> where T : class, new()
         return this;
     }
 
-    bool ColumnExist(string columnName)
-    {
-        foreach (PropertyInfo prop in typeof(T).GetProperties())
-        {
-            DatabaseColumn propAttr = prop.GetCustomAttribute(typeof(DatabaseColumn)) as DatabaseColumn;
-
-            if (propAttr?.Name == columnName) return true;
-        }
-
-        return false;
-    }
-
     public QueryReady<T> OrderByDesc(string columnName)
     {
         if (!string.IsNullOrWhiteSpace(_orderBy)) return this;
-        if (!ColumnExist(columnName)) return this;
 
         _orderBy = $" ORDER BY {columnName} DESC ";
         return this;
@@ -51,29 +38,8 @@ public class QueryReady<T> where T : class, new()
     public QueryReady<T> OrderBy(string columnName)
     {
         if (!string.IsNullOrWhiteSpace(_orderBy)) return this;
-        if (!ColumnExist(columnName)) return this;
 
         _orderBy = $" ORDER BY {columnName} ASC ";
-        return this;
-    }
-
-
-    /* Map column names for joined tables */
-
-    public QueryReady<T> RemoveColumnName(string columnName)
-    {
-        if (!ColumnExist(columnName)) return this;
-
-        _queryBuilder.OverrideColumnNames($", {columnName}", "");
-        _queryBuilder.OverrideColumnNames(columnName, "");
-        return this;
-    }
-
-    public QueryReady<T> MapColumnName(string columnName, string newColumnName, string? alias = null)
-    {
-        if (!ColumnExist(columnName)) return this;
-
-        _queryBuilder.OverrideColumnNames(columnName, newColumnName, alias);
         return this;
     }
 
