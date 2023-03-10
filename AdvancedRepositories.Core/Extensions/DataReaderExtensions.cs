@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using System.ComponentModel;
+using System.Data;
 
 namespace AdvancedRepositories.Core.Extensions;
 
@@ -18,11 +19,17 @@ public static class DataReaderExtensions
         return (T)reader[colName];
     }
 
-    public static object TypeOrNull(this IDataReader reader, Type type, string colName)
+    public static object? TypeOrNull(this IDataReader reader, Type type, string colName)
     {
         if (reader[colName] == DBNull.Value)
             return null;
 
-        return Convert.ChangeType(reader[colName], type);
+        TypeConverter conv = TypeDescriptor.GetConverter(type);
+
+        // If nullable
+        if (Nullable.GetUnderlyingType(type) != null)
+            return conv.ConvertFrom(reader[colName]);
+        else
+            return Convert.ChangeType(reader[colName], type);
     }
 }

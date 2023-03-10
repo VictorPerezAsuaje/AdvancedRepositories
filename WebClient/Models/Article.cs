@@ -6,4 +6,5 @@ public class Article
     public string Title { get; set; }
     public string Slug { get; set; }
     public DateTime CreatedOn { get; set; }
+    public DateTime? PublicationDate { get; set; }
 }

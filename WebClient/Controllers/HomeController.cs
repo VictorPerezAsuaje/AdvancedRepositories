@@ -40,6 +40,7 @@ public class HomeController : Controller
                             x.Add("Title", "Titulo");
                             x.Add("Slug", "Slug");
                             x.Add("CreatedOn", "FechaCreacion");
+                            x.Add("PublicationDate", "FechaPublicacion");
                         }),
             4 => _articleTypedRepository.FindAdvanced(x => x.ColumnName("Titulo").Like(title))
         };
