@@ -1,7 +1,7 @@
 ﻿
 namespace AdvancedRepositories.Core.Configuration;
 
-public enum DatabaseType { InMemory, SqlServer }
+public enum DatabaseType { Sqlite, SqlServer }
 public abstract class BaseDatabaseConfiguration
 {
     public DatabaseType DatabaseType { get; set; } = DatabaseType.SqlServer;

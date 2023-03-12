@@ -15,7 +15,8 @@ It also provides a way to even avoid creating one altogether if all you want is 
 | &nbsp;&nbsp;&nbsp;&nbsp;[Update](#update) | 
 | &nbsp;&nbsp;&nbsp;&nbsp;[Delete](#delete) | 
 | &nbsp;&nbsp;&nbsp;&nbsp;[Classic vs Advanced Read](#classic-vs-advanced-read) | 
-| [QueryFilterBuilder](#QueryFilterBuilder) | 
+| [QueryFilterBuilder](#queryfilterbuilder) | 
+| [Release Notes](#release-notes) | 
 
 
 ## Initial setup
@@ -37,12 +38,16 @@ It also provides a way to even avoid creating one altogether if all you want is 
         c.DbName = ""; // Required
         c.User = ""; // Optional
         c.Password = ""; // Optional
+        c.DatabaseType = DatabaseType.[SQLServer / Sqlite] // Optional. SQLServer by default
     });
 ```
 
 Alternatively you can specify your connection manually:
 ```sh
-  builder.Services.AddRepositoriesConfiguration(c => c.AddConnectionStringManually("{YOUR-CONNECTION-STRING}"));
+  builder.Services.AddRepositoriesConfiguration(c => {
+      c.DatabaseType = DatabaseType.[SQLServer / Sqlite] // Optional. SQLServer by default
+      c.AddConnectionStringManually("{YOUR-CONNECTION-STRING}");
+  });
 ```
 
 3. Now you can either create your repositories by inheriting from the AdvancedRepository class or use the IFluentRepository interface to retrieve data.
@@ -373,3 +378,16 @@ _fluentRepo.Select<TagDTO>("Nombre")
     .OrderByDesc("Id")
     .GetList();
 ```
+
+### Release Notes
+
+Latest version: 0.6.0-pre
+
+#### v.0.6.0-pre changes
+
+| Breaking changes | Other changes |
+| - | - |
+| | Changed implementation for a more generic one based on ADO.NET interfaces instead of specific classes to allow support for future possible databases. Currently supported: SQL Server and Sqlite (alpha). Planned support for MySQL and PostgreSQL.|
+| | Added integration tests with In Memory database (SQLite) for the FluentRepository Mapping System and the QueryReady class main methods.|
+| | Added the option to choose which type of Database to use during configuration with the DatabaseType enum. |
+| | Removed transactions opening by default in base repositories to avoid them being applied to Read-type queries and possible deadlocks |

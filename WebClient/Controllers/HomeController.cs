@@ -31,7 +31,8 @@ public class HomeController : Controller
         {
             1 => _articleRepository.FindClassic(title),
             2 => _articleRepository.FindAdvanced(x => x.ColumnName("Titulo").Like(title)),
-            3 => _fluentRepo.Select<Article>()
+            3 => _articleTypedRepository.FindAdvanced(x => x.ColumnName("Titulo").Like(title)),
+            4 => _fluentRepo.Select<Article>()
                         .From("Articulos")
                         .Where(x => x.ColumnName("Titulo").Like(title))
                         .GetList(x =>
@@ -42,12 +43,7 @@ public class HomeController : Controller
                             x.Add("CreatedOn", "FechaCreacion");
                             x.Add("PublicationDate", "FechaPublicacion");
                         }),
-            4 => _articleTypedRepository.FindAdvanced(x => x.ColumnName("Titulo").Like(title)),
-            5 => _fluentRepo.Select<Article>("Id", "Titulo", "Slug")
-                        .From("Articulos")
-                        .Where(x => x.ColumnName("Titulo").Like(title))
-                        .GetList(true),
-            6 => _fluentRepo.Select<Article>("Id", "Titulo", "Slug", "FechaCreacion", "FechaPublicacion")
+            5 => _fluentRepo.Select<Article>("Id", "Titulo", "Slug", "FechaCreacion", "FechaPublicacion")
                         .From("Articulos")
                         .Where(x => x.ColumnName("Titulo").Like(title))
                         .GetList(x =>

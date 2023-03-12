@@ -13,7 +13,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{41F1A2F8-085
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{D9AE2705-5A13-4CA1-9DFC-5CEEB90E4023}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdvancedRepositories.Core.Tests", "AdvancedRepositories.Core.Tests\AdvancedRepositories.Core.Tests.csproj", "{6FB9CAD5-DC05-45F2-B24D-1033224EFAB7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdvancedRepositories.Core.Tests", "AdvancedRepositories.Core.Tests\AdvancedRepositories.Core.Tests.csproj", "{6FB9CAD5-DC05-45F2-B24D-1033224EFAB7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

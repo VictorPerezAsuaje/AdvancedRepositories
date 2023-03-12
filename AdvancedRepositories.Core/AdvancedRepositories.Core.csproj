@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>AdvancedRepositories</Title>
-    <Version>0.5.3-pre</Version>
+    <Version>0.6.0-pre</Version>
     <Company>Victor Pérez Asuaje</Company>
     <Product>AdvancedRepositories</Product>
     <Description>Class library created to ease the process of creating a repository with ADO.NET by providing middlewares, base classes, interfaces, etc.</Description>

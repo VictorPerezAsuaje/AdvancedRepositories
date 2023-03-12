@@ -3,7 +3,6 @@ using AdvancedRepositories.Core.Extensions;
 using FluentRepositories.Attributes;
 using Microsoft.Data.Sqlite;
 using System.Data;
-using System.Data.Common;
 using System.Data.SqlClient;
 using System.Reflection;
 
@@ -22,13 +21,14 @@ public abstract class BaseRepository : IDisposable
         _con = _dbConfig.DatabaseType switch
         {
             DatabaseType.SqlServer => new SqlConnection(_dbConfig.ConnectionString()),
-            DatabaseType.InMemory => new SqliteConnection(_dbConfig.ConnectionString()),
+            DatabaseType.Sqlite => new SqliteConnection(_dbConfig.ConnectionString()),
             _ => throw new ArgumentNullException("A DatabaseType was not specified for the DatabaseConfiguration.")
         };
 
         _con.Open();
-        _transaction = _con.BeginTransaction();
     }
+
+    protected void OpenTransaction() => _con.BeginTransaction();
 
     protected string FieldsFromAttributesOf<T>()
     {
@@ -65,7 +65,7 @@ public abstract class BaseRepository : IDisposable
         => _dbConfig.DatabaseType switch
         {
             DatabaseType.SqlServer => new SqlCommand("", (SqlConnection)_con, (SqlTransaction)_transaction),
-            DatabaseType.InMemory => new SqliteCommand("", (SqliteConnection?)_con, (SqliteTransaction?)_transaction),
+            DatabaseType.Sqlite => new SqliteCommand("", (SqliteConnection?)_con, (SqliteTransaction?)_transaction),
         };
 
     protected IDbCommand CreateCommand(string query)
@@ -75,8 +75,8 @@ public abstract class BaseRepository : IDisposable
 
         return _dbConfig.DatabaseType switch
         {
-            DatabaseType.SqlServer => new SqlCommand(query, (SqlConnection)_con, (SqlTransaction)_transaction),
-            DatabaseType.InMemory => new SqliteCommand(query, (SqliteConnection?)_con, (SqliteTransaction?)_transaction),
+            DatabaseType.SqlServer => new SqlCommand(query, (SqlConnection)_con, (SqlTransaction?)_transaction),
+            DatabaseType.Sqlite => new SqliteCommand(query, (SqliteConnection?)_con, (SqliteTransaction?)_transaction),
         };
     }
 
@@ -84,7 +84,8 @@ public abstract class BaseRepository : IDisposable
     {
         if (_transaction != null) _transaction.Dispose();
 
-        if (_con == null) return;
+        if (_con == null) 
+            return;
 
         _con.Close();
         _con.Dispose();

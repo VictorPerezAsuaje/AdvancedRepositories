@@ -91,49 +91,52 @@ public class QueryReady<T> where T : class, new()
             }
 
 
-            IDataReader rdr = _CommandWithQuery.ExecuteReader();
-
-            List<string> columns = Enumerable.Range(0, rdr.FieldCount).Select(x => rdr.GetName(x)).ToList();
-
-            while (rdr.Read())
+            using (IDataReader rdr = _CommandWithQuery.ExecuteReader())
             {
-                T item = new T();
-                bool hasProperties = false;
 
-                foreach (PropertyInfo prop in typeof(T).GetProperties())
+                List<string> columns = Enumerable.Range(0, rdr.FieldCount).Select(x => rdr.GetName(x)).ToList();
+
+                while (rdr.Read())
                 {
-                    if (mapByFields != null)
+                    T item = new T();
+                    bool hasProperties = false;
+
+                    foreach (PropertyInfo prop in typeof(T).GetProperties())
                     {
-                        if (mapByFields.TryGetValue(prop.Name, out string dbPropName))
+                        if (mapByFields != null)
                         {
-                            prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, dbPropName));
+                            if (mapByFields.TryGetValue(prop.Name, out string dbPropName))
+                            {
+                                prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, dbPropName));
+                                hasProperties = true;
+                                continue;
+                            }
+                        }
+
+                        DatabaseColumn propAttr = prop.GetCustomAttribute<DatabaseColumn>();
+
+                        if (mapper.ByColumnAttribute && propAttr != null)
+                        {
+                            if (!_queryBuilder.ContainsQueryField(propAttr.Name)) continue;
+
+                            prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, propAttr.Name));
+                            hasProperties = true;
+                            continue;
+                        }
+
+                        if (mapper.ByPropertyName)
+                        {
+                            if (!columns.Contains(prop.Name)) continue;
+
+                            prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, prop.Name));
                             hasProperties = true;
                             continue;
                         }
                     }
 
-                    DatabaseColumn propAttr = prop.GetCustomAttribute<DatabaseColumn>();
-
-                    if (mapper.ByColumnAttribute && propAttr != null)
-                    {
-                        if (!_queryBuilder.ContainsQueryField(propAttr.Name)) continue;
-
-                        prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, propAttr.Name));
-                        hasProperties = true;
-                        continue;
-                    }
-
-                    if (mapper.ByPropertyName)
-                    {
-                        if (!columns.Contains(prop.Name)) continue;
-
-                        prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, prop.Name));
-                        hasProperties = true;
-                        continue;
-                    }
+                    if (hasProperties) list.Add(item);
                 }
 
-                if (hasProperties) list.Add(item);
             }
         }
         catch(Exception ex)
@@ -162,23 +165,26 @@ public class QueryReady<T> where T : class, new()
             if(!_queryBuilder.ContainsQueryFields)
                 throw new ArgumentNullException("No database fields specified. \nYou have to  specify fields on the Select<T>( -- Your fields here -- ) and use a generic action, for instance, GetList(). \nOtherwise, leave generic Select<T>() and specify them at the selected action, for instance, GetList(x => { -- Your fields here -- }).");
 
-            IDataReader rdr = _CommandWithQuery.ExecuteReader();
-            while (rdr.Read())
+            using (IDataReader rdr = _CommandWithQuery.ExecuteReader())
             {
-                T item = new T();
-                bool hasProperties = false;
-
-                foreach (PropertyInfo prop in typeof(T).GetPropsWithCustomType<DatabaseColumn>())
+                while (rdr.Read())
                 {
-                    DatabaseColumn propAttr = prop.GetCustomAttribute<DatabaseColumn>();
+                    T item = new T();
+                    bool hasProperties = false;
 
-                    if (!_queryBuilder.ContainsQueryField(propAttr.Name)) continue;
+                    foreach (PropertyInfo prop in typeof(T).GetPropsWithCustomType<DatabaseColumn>())
+                    {
+                        DatabaseColumn propAttr = prop.GetCustomAttribute<DatabaseColumn>();
 
-                    prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, propAttr.Name));
-                    hasProperties = true;
+                        if (!_queryBuilder.ContainsQueryField(propAttr.Name)) continue;
+
+                        prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, propAttr.Name));
+                        hasProperties = true;
+                    }
+
+                    if (hasProperties) list.Add(item);
                 }
 
-                if (hasProperties) list.Add(item);
             }
         }
         catch(Exception ex)
@@ -206,22 +212,25 @@ public class QueryReady<T> where T : class, new()
 
             _queryBuilder.ReplaceQueryFieldsWithMappedFields(map.Values.ToList());
 
-            IDataReader rdr = _CommandWithQuery.ExecuteReader();
-            while (rdr.Read())
+            using (IDataReader rdr = _CommandWithQuery.ExecuteReader())
             {
-                T item = new T();
-                bool hasProperties = false;
-
-                foreach (PropertyInfo prop in typeof(T).GetProperties())
+                while (rdr.Read())
                 {
-                    if (!map.TryGetValue(prop.Name, out string dbPropName))
-                        continue;
+                    T item = new T();
+                    bool hasProperties = false;
 
-                    prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, dbPropName));
-                    hasProperties = true;
+                    foreach (PropertyInfo prop in typeof(T).GetProperties())
+                    {
+                        if (!map.TryGetValue(prop.Name, out string dbPropName))
+                            continue;
+
+                        prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, dbPropName));
+                        hasProperties = true;
+                    }
+
+                    if (hasProperties) list.Add(item);
                 }
 
-                if(hasProperties) list.Add(item);
             }
         }
         catch (Exception ex)
@@ -246,24 +255,25 @@ public class QueryReady<T> where T : class, new()
             if (!_queryBuilder.ContainsQueryFields)
                 throw new ArgumentNullException("No database fields specified. \nYou have to  specify fields on the Select<T>( -- Your fields here -- ) and use a generic action, for instance, GetList(). \nOtherwise, leave generic Select<T>() and specify them at the selected action, for instance, GetList(x => { -- Your fields here -- }).");
 
-            IDataReader rdr = _CommandWithQuery.ExecuteReader();
+            List<string> properties = typeof(T).GetProperties().Select(x => x.Name).ToList();
+            _queryBuilder.ReplaceQueryFieldsWithMappedFields(properties);
 
-            List<string> columns = Enumerable.Range(0, rdr.FieldCount).Select(x => rdr.GetName(x)).ToList();
-
-            while (rdr.Read())
+            using (IDataReader rdr = _CommandWithQuery.ExecuteReader())
             {
-                T item = new T();
-                bool hasProperties = false;
-
-                foreach (PropertyInfo prop in typeof(T).GetProperties())
+                while (rdr.Read())
                 {
-                    if (!columns.Contains(prop.Name)) continue;
+                    T item = new T();
+                    bool hasProperties = false;
 
-                    prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, prop.Name));
-                    hasProperties = true;
+                    foreach (PropertyInfo prop in typeof(T).GetProperties())
+                    {
+                        prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, prop.Name));
+                        hasProperties = true;
+                    }
+
+                    if (hasProperties) list.Add(item);
                 }
 
-                if (hasProperties) list.Add(item);
             }
         }
         catch (Exception ex)
@@ -315,48 +325,49 @@ public class QueryReady<T> where T : class, new()
             }
 
 
-            IDataReader rdr = _CommandWithQuery.ExecuteReader();
-
-            List<string> columns = Enumerable.Range(0, rdr.FieldCount).Select(x => rdr.GetName(x)).ToList();
-
-            while (rdr.Read())
+            using (IDataReader rdr = _CommandWithQuery.ExecuteReader())
             {
-                if (item != null)
-                    return DbResult.Fail<T>("The query returned more than one item with the criteria specified");
+                List<string> columns = Enumerable.Range(0, rdr.FieldCount).Select(x => rdr.GetName(x)).ToList();
 
-                bool hasProperties = false;
-
-
-                foreach (PropertyInfo prop in typeof(T).GetProperties())
+                while (rdr.Read())
                 {
-                    if (mapByFields != null)
+                    if (item != null)
+                        return DbResult.Fail<T>("The query returned more than one item with the criteria specified");
+
+                    bool hasProperties = false;
+
+
+                    foreach (PropertyInfo prop in typeof(T).GetProperties())
                     {
-                        if (mapByFields.TryGetValue(prop.Name, out string dbPropName))
+                        if (mapByFields != null)
                         {
-                            prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, dbPropName));
+                            if (mapByFields.TryGetValue(prop.Name, out string dbPropName))
+                            {
+                                prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, dbPropName));
+                                hasProperties = true;
+                                continue;
+                            }
+                        }
+
+                        DatabaseColumn propAttr = prop.GetCustomAttribute<DatabaseColumn>();
+
+                        if (mapper.ByColumnAttribute && propAttr != null)
+                        {
+                            if (!_queryBuilder.ContainsQueryField(propAttr.Name)) continue;
+
+                            prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, propAttr.Name));
                             hasProperties = true;
                             continue;
                         }
-                    }
 
-                    DatabaseColumn propAttr = prop.GetCustomAttribute<DatabaseColumn>();
+                        if (mapper.ByPropertyName)
+                        {
+                            if (!columns.Contains(prop.Name)) continue;
 
-                    if (mapper.ByColumnAttribute && propAttr != null)
-                    {
-                        if (!_queryBuilder.ContainsQueryField(propAttr.Name)) continue;
-
-                        prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, propAttr.Name));
-                        hasProperties = true;
-                        continue;
-                    }
-
-                    if (mapper.ByPropertyName)
-                    {
-                        if (!columns.Contains(prop.Name)) continue;
-
-                        prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, prop.Name));
-                        hasProperties = true;
-                        continue;
+                            prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, prop.Name));
+                            hasProperties = true;
+                            continue;
+                        }
                     }
                 }
             }
@@ -389,21 +400,23 @@ public class QueryReady<T> where T : class, new()
             if (!_queryBuilder.ContainsQueryFields)
                 throw new ArgumentNullException("No database fields specified. \nYou have to  specify fields on the Select<T>( -- Your fields here -- ) and use a generic action, for instance, GetList(). \nOtherwise, leave generic Select<T>() and specify them at the selected action, for instance, GetList(x => { -- Your fields here -- }).");
 
-            IDataReader rdr = _CommandWithQuery.ExecuteReader();
-            while (rdr.Read())
+            using (IDataReader rdr = _CommandWithQuery.ExecuteReader())
             {
-                if (item != null) 
-                    return DbResult.Fail<T>("The query returned more than one item with the criteria specified");
-
-                item = new T();
-
-                foreach (PropertyInfo prop in typeof(T).GetPropsWithCustomType<DatabaseColumn>())
+                while (rdr.Read())
                 {
-                    DatabaseColumn propAttr = prop.GetCustomAttribute<DatabaseColumn>();
+                    if (item != null)
+                        return DbResult.Fail<T>("The query returned more than one item with the criteria specified");
 
-                    if (!_queryBuilder.ContainsQueryField(propAttr.Name)) continue;
+                    item = new T();
 
-                    prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, propAttr.Name));
+                    foreach (PropertyInfo prop in typeof(T).GetPropsWithCustomType<DatabaseColumn>())
+                    {
+                        DatabaseColumn propAttr = prop.GetCustomAttribute<DatabaseColumn>();
+
+                        if (!_queryBuilder.ContainsQueryField(propAttr.Name)) continue;
+
+                        prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, propAttr.Name));
+                    }
                 }
             }
         }
@@ -431,22 +444,23 @@ public class QueryReady<T> where T : class, new()
             if (!_queryBuilder.ContainsQueryFields)
                 throw new ArgumentNullException("No database fields specified. \nYou have to  specify fields on the Select<T>( -- Your fields here -- ) and use a generic action, for instance, GetList(). \nOtherwise, leave generic Select<T>() and specify them at the selected action, for instance, GetList(x => { -- Your fields here -- }).");
 
-            IDataReader rdr = _CommandWithQuery.ExecuteReader();
+            using (IDataReader rdr = _CommandWithQuery.ExecuteReader())
+            { 
+                List<string> columns = Enumerable.Range(0, rdr.FieldCount).Select(x => rdr.GetName(x)).ToList();
 
-            List<string> columns = Enumerable.Range(0, rdr.FieldCount).Select(x => rdr.GetName(x)).ToList();
-
-            while (rdr.Read())
-            {
-                if (item != null)
-                    return DbResult.Fail<T>("The query returned more than one item with the criteria specified");
-
-                item = new T();
-
-                foreach (PropertyInfo prop in typeof(T).GetProperties())
+                while (rdr.Read())
                 {
-                    if (!columns.Contains(prop.Name)) continue;
+                    if (item != null)
+                        return DbResult.Fail<T>("The query returned more than one item with the criteria specified");
 
-                    prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, prop.Name));
+                    item = new T();
+
+                    foreach (PropertyInfo prop in typeof(T).GetProperties())
+                    {
+                        if (!columns.Contains(prop.Name)) continue;
+
+                        prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, prop.Name));
+                    }
                 }
             }
         }
@@ -476,22 +490,24 @@ public class QueryReady<T> where T : class, new()
 
             _queryBuilder.ReplaceQueryFieldsWithMappedFields(map.Values.ToList());
 
-            IDataReader rdr = _CommandWithQuery.ExecuteReader();
-            while (rdr.Read())
+            using (IDataReader rdr = _CommandWithQuery.ExecuteReader())
             {
-                if (item != null) 
-                    return DbResult.Fail<T>("The query returned more than one item with the criteria specified");
-
-                item = new T();
-
-                foreach (PropertyInfo prop in typeof(T).GetProperties())
+                while (rdr.Read())
                 {
-                    if (!map.TryGetValue(prop.Name, out string dbPropName))
-                        continue;
+                    if (item != null)
+                        return DbResult.Fail<T>("The query returned more than one item with the criteria specified");
 
-                    prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, dbPropName));
+                    item = new T();
+
+                    foreach (PropertyInfo prop in typeof(T).GetProperties())
+                    {
+                        if (!map.TryGetValue(prop.Name, out string dbPropName))
+                            continue;
+
+                        prop.SetValue(item, rdr.TypeOrNull(prop.PropertyType, dbPropName));
+                    }
                 }
-            }
+            }    
         }
         catch (Exception ex)
         {

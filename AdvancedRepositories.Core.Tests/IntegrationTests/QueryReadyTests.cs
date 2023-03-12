@@ -1,28 +1,22 @@
 ﻿using AdvancedRepositories.Core.Configuration;
 using AdvancedRepositories.Core.Repositories.Fluent;
+using AdvancedRepositories.Core.Tests.IntegrationTests.TestClasses;
 using FluentAssertions;
 
-namespace AdvancedRepositories.Core.Tests;
+namespace AdvancedRepositories.Core.Tests.IntegrationTests;
 
 public class QueryReadyTests
 {
-    private FluentRepository GenerateFluentRepository()
-    {
-        BaseDatabaseConfiguration bdb = new DatabaseConfiguration();
-        bdb.DatabaseType = DatabaseType.InMemory;
-        bdb.AddConnectionStringManually("Data Source=testDb.db");
-        return new FluentRepository(bdb);
-    }
+    private FluentRepository FluentRepository => DbContext.GenerateFluentRepository();
 
     [Fact]
     public void Select_From_Success()
     {
         // Given
         string expectedQuery = "SELECT Id, Name FROM TestTable ";
-        FluentRepository fluentRepository = GenerateFluentRepository();
 
         // When 
-        string result = fluentRepository.Select<AttributedClass>()
+        string result = FluentRepository.Select<AttributedClass>()
             .From("TestTable")
             .GetBuiltQuery();
 
@@ -36,10 +30,9 @@ public class QueryReadyTests
     {
         // Given
         string expectedQuery = "SELECT Id, Name FROM TestTable ";
-        FluentRepository fluentRepository = GenerateFluentRepository();
 
         // When 
-        string result = fluentRepository.Select<AttributedClass>()
+        string result = FluentRepository.Select<AttributedClass>()
             .FromDefaultTable()
             .GetBuiltQuery();
 
@@ -53,10 +46,9 @@ public class QueryReadyTests
     {
         // Given
         string expectedQuery = "SELECT DISTINCT Id, Name FROM TestTable ";
-        FluentRepository fluentRepository = GenerateFluentRepository();
 
         // When 
-        string result = fluentRepository.SelectDistinct<AttributedClass>()
+        string result = FluentRepository.SelectDistinct<AttributedClass>()
             .From("TestTable")
             .GetBuiltQuery();
 
@@ -70,11 +62,44 @@ public class QueryReadyTests
     {
         // Given
         string expectedQuery = "SELECT DISTINCT Id, Name FROM TestTable ";
-        FluentRepository fluentRepository = GenerateFluentRepository();
 
         // When 
-        string result = fluentRepository.SelectDistinct<AttributedClass>()
+        string result = FluentRepository.SelectDistinct<AttributedClass>()
             .FromDefaultTable()
+            .GetBuiltQuery();
+
+        // Then
+        result.Should().NotBeNullOrWhiteSpace();
+        result.Should().BeEquivalentTo(expectedQuery);
+    }
+
+    [Fact]
+    public void Select_From_OrderBy_Success()
+    {
+        // Given
+        string expectedQuery = "SELECT Id, Name FROM TestTable ORDER BY Id ASC ";
+
+        // When 
+        string result = FluentRepository.Select<AttributedClass>()
+            .From("TestTable")
+            .OrderBy("Id")
+            .GetBuiltQuery();
+
+        // Then
+        result.Should().NotBeNullOrWhiteSpace();
+        result.Should().BeEquivalentTo(expectedQuery);
+    }
+
+    [Fact]
+    public void Select_From_OrderByDesc_Success()
+    {
+        // Given
+        string expectedQuery = "SELECT Id, Name FROM TestTable ORDER BY Id DESC ";
+
+        // When 
+        string result = FluentRepository.Select<AttributedClass>()
+            .From("TestTable")
+            .OrderByDesc("Id")
             .GetBuiltQuery();
 
         // Then

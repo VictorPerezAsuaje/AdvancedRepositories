@@ -2,7 +2,6 @@
 using AdvancedRepositories.Core.Extensions;
 using AdvancedRepositories.Core.Repositories.Fluent;
 using System.Data;
-using System.Data.SqlClient;
 
 namespace AdvancedRepositories.Core.Repositories.Advanced;
 
@@ -26,7 +25,10 @@ public abstract class AdvancedRepository : BaseRepository
         => new FluentQueryBuilder<T>(CreateCommand($"SELECT DISTINCT {FieldsFromAttributesOf<T>()} "));
 
     protected InsertCommand InsertInto(string table)
-        => new InsertCommand(CreateCommand($"INSERT INTO {table} "));
+    {
+        OpenTransaction();
+        return new InsertCommand(CreateCommand($"INSERT INTO {table} "));
+    }
 
     public class InsertCommand : AdvancedCommand
     {
@@ -53,7 +55,10 @@ public abstract class AdvancedRepository : BaseRepository
     }
 
     protected UpdateCommand UpdateFrom(string table)
-        => new UpdateCommand(CreateCommand($"UPDATE {table} SET "));
+    {
+        OpenTransaction();
+        return new UpdateCommand(CreateCommand($"UPDATE {table} SET "));
+    }
 
     public class UpdateCommand : AdvancedCommand
     {
@@ -87,7 +92,10 @@ public abstract class AdvancedRepository : BaseRepository
     }
 
     protected DeleteCommand DeleteFrom(string table)
-        => new DeleteCommand(CreateCommand($"DELETE {table} "));
+    {
+        OpenTransaction();
+        return new DeleteCommand(CreateCommand($"DELETE {table} "));
+    }
     public class DeleteCommand : AdvancedCommand
     {
         public DeleteCommand(IDbCommand cmd) : base(cmd)
@@ -116,7 +124,11 @@ public abstract class AdvancedRepository : BaseRepository
         {
             try
             {
-                _cmd.ExecuteNonQuery();
+                using (_cmd)
+                {
+                    _cmd.ExecuteNonQuery();
+                    _cmd.Transaction?.Commit();
+                }
             }
             catch (Exception ex)
             {
@@ -134,7 +146,11 @@ public abstract class AdvancedRepository : BaseRepository
 
             try
             {
-                obj = _cmd.ExecuteScalar();
+                using (_cmd)
+                {
+                    obj = _cmd.ExecuteScalar();
+                    _cmd.Transaction?.Commit();
+                }
             }
             catch (Exception ex)
             {

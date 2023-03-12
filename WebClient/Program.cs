@@ -1,4 +1,5 @@
 using AdvancedRepositories.Core;
+using AdvancedRepositories.Core.Configuration;
 using WebClient.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,6 +10,7 @@ builder.Services.AddScoped<IArticleRepository, ArticleRepository>();
 builder.Services.AddScoped<IArticleTypedRepository, ArticleTypedRepository>();
 builder.Services.AddRepositoriesConfiguration(c =>
 {
+    c.DatabaseType = DatabaseType.SqlServer;
     c.Server = "(localdb)\\MSSQLLocalDB";
     c.DbName = "RepositoriesTestDb";
 });
