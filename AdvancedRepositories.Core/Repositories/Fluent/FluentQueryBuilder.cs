@@ -1,12 +1,13 @@
 ﻿using AdvancedRepositories.Core.Extensions;
 using FluentRepositories.Attributes;
+using System.Data;
 using System.Data.SqlClient;
 
 namespace AdvancedRepositories.Core.Repositories.Fluent;
 
 public class FluentQueryBuilder<T> where T : class, new()
 {
-    internal SqlCommand _cmd;
+    internal IDbCommand _cmd;
     internal QueryReady<T> _queryReady;
     internal string _from;
     string _queryFields;
@@ -23,7 +24,7 @@ public class FluentQueryBuilder<T> where T : class, new()
         return true;
     }
 
-    public FluentQueryBuilder(SqlCommand cmd)
+    public FluentQueryBuilder(IDbCommand cmd)
     {
         _cmd = cmd;
         _queryFields = cmd.CommandText;
@@ -73,7 +74,7 @@ public class FluentQueryBuilder<T> where T : class, new()
     internal string BuildQuery(string conditions, string orderBy) 
         => $"{_overridenQueryFields ?? _queryFields} {_from} {conditions} {orderBy}".ClearMultipleSpaces();
 
-    internal SqlCommand GetCommandWithQuery(string conditions, string orderBy)
+    internal IDbCommand GetCommandWithQuery(string conditions, string orderBy)
     {
         _cmd.CommandText = BuildQuery(conditions, orderBy);
         return _cmd;

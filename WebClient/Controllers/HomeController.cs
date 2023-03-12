@@ -42,7 +42,25 @@ public class HomeController : Controller
                             x.Add("CreatedOn", "FechaCreacion");
                             x.Add("PublicationDate", "FechaPublicacion");
                         }),
-            4 => _articleTypedRepository.FindAdvanced(x => x.ColumnName("Titulo").Like(title))
+            4 => _articleTypedRepository.FindAdvanced(x => x.ColumnName("Titulo").Like(title)),
+            5 => _fluentRepo.Select<Article>("Id", "Titulo", "Slug")
+                        .From("Articulos")
+                        .Where(x => x.ColumnName("Titulo").Like(title))
+                        .GetList(true),
+            6 => _fluentRepo.Select<Article>("Id", "Titulo", "Slug", "FechaCreacion", "FechaPublicacion")
+                        .From("Articulos")
+                        .Where(x => x.ColumnName("Titulo").Like(title))
+                        .GetList(x =>
+                        {
+                            x.ByColumnAttribute = true;
+                            x.ByPropertyName = true;
+                            x.MapPropertyToDbField = y =>
+                            {
+                                y.Add("Title", "Titulo");
+                                y.Add("CreatedOn", "FechaCreacion");
+                                y.Add("PublicationDate", "FechaPublicacion");
+                            };
+                        })
         };
 
         if(articleResult.IsSuccess)

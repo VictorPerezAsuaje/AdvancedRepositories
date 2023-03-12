@@ -32,7 +32,7 @@ public class ArticleRepository : AdvancedRepository, IArticleRepository
                 SqlCommand cmd = new SqlCommand();
                 cmd.Connection = con;
 
-                cmd.CommandText = "SELECT Id, Titulo, Slug, FechaCreacion FROM Articulos";
+                cmd.CommandText = "SELECT Id, Titulo, Slug, FechaCreacion, FechaPublicacion FROM Articulos";
 
                 if(!string.IsNullOrWhiteSpace(title))
                 {
@@ -48,7 +48,8 @@ public class ArticleRepository : AdvancedRepository, IArticleRepository
                         Id = rdr.GetValueType<int>("Id"),
                         Slug = rdr.GetValueType<string>("Slug"),
                         Title = rdr.GetValueType<string>("Titulo"),
-                        CreatedOn = rdr.GetValueType<DateTime>("FechaCreacion")
+                        CreatedOn = rdr.GetValueType<DateTime>("FechaCreacion"),
+                        PublicationDate = rdr.TypeOrNull<DateTime>("FechaPublicacion")
                     });
                 }
             }            
@@ -62,7 +63,7 @@ public class ArticleRepository : AdvancedRepository, IArticleRepository
     }
 
     public DbResult<List<Article>> FindAdvanced(Action<QueryFilterBuilder> filter)
-        => Select<Article>("Id", "Titulo", "Slug", "FechaCreacion")
+        => Select<Article>()
             .From("Articulos")
             .Where(filter)
             .GetList(x =>
@@ -71,6 +72,7 @@ public class ArticleRepository : AdvancedRepository, IArticleRepository
                 x.Add("Title", "Titulo");
                 x.Add("Slug", "Slug");
                 x.Add("CreatedOn", "FechaCreacion");
+                x.Add("PublicationDate", "FechaPublicacion");
             });
 
     public DbResult Insert(Article article)

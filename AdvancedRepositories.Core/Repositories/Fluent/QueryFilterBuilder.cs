@@ -1,15 +1,16 @@
 ﻿using AdvancedRepositories.Core.Extensions;
+using System.Data;
 using System.Data.SqlClient;
 
 namespace AdvancedRepositories.Core.Repositories.Fluent;
 
 public class QueryFilterBuilder
 {
-    SqlCommand _cmd;
+    IDbCommand _cmd;
     int _ParamNumber => _cmd.Parameters.Count;
     string _Where = "";
 
-    public QueryFilterBuilder(SqlCommand cmd) => _cmd = cmd;
+    public QueryFilterBuilder(IDbCommand cmd) => _cmd = cmd;
 
     public QueryFilterBuilder(SqlCommand cmd, Action<QueryFilterBuilder> filterConfig)
     {
@@ -18,7 +19,7 @@ public class QueryFilterBuilder
     }
 
     void AddParameterWithValue(string parameterName, string value)
-        => _cmd.Parameters.AddWithValue(parameterName, value);
+        => _cmd.AddWithValue(parameterName, value);
 
     void AddToWhere(string content)
     {
@@ -225,7 +226,7 @@ public class QueryFilterBuilder
     internal string ApplyOrCondition(string condition)
         => $" {_Where.ClearMultipleSpaces()} {condition.ClearMultipleSpaces().Replace("WHERE", "OR")} ";
 
-    public SqlCommand GetCommandWithFilter()
+    public IDbCommand GetCommandWithFilter()
     {
         _cmd.CommandText += $" {GetCondition()} ";
         return _cmd;

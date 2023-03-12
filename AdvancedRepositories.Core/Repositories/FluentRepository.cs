@@ -1,6 +1,8 @@
 ﻿using AdvancedRepositories.Core.Configuration;
 using AdvancedRepositories.Core.Extensions;
 using FluentRepositories.Attributes;
+using System.Data;
+using System.Data.Common;
 using System.Data.SqlClient;
 using System.Reflection;
 
@@ -33,7 +35,7 @@ public sealed class FluentRepository : BaseRepository, IFluentRepository
             if (tableAttr == null) 
                 throw new ArgumentNullException($"The class {typeof(T).Name} does not have a [DefaultTable] attribute defined.");
 
-            SqlCommand cmd = CreateCommand($"SELECT {queryFields} FROM {tableAttr.Name} ");
+            IDbCommand cmd = CreateCommand($"SELECT {queryFields} FROM {tableAttr.Name} ");
 
             if(filterConfig != null)
             {
@@ -42,8 +44,7 @@ public sealed class FluentRepository : BaseRepository, IFluentRepository
                 cmd = filter.GetCommandWithFilter();
             }        
 
-        
-            SqlDataReader rdr = cmd.ExecuteReader();
+            IDataReader rdr = cmd.ExecuteReader();
             while (rdr.Read())
             {
                 T item = new T();

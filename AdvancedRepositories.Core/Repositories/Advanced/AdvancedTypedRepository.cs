@@ -1,5 +1,7 @@
 ﻿using AdvancedRepositories.Core.Configuration;
+using AdvancedRepositories.Core.Extensions;
 using AdvancedRepositories.Core.Repositories.Fluent;
+using System.Data;
 using System.Data.SqlClient;
 
 namespace AdvancedRepositories.Core.Repositories.Advanced;
@@ -36,7 +38,7 @@ public abstract class AdvancedTypedRepository<T> : BaseRepository where T : clas
     {
         string _Fields = "";
         string _Values = "";
-        public InsertCommand(SqlCommand cmd) : base(cmd)
+        public InsertCommand(IDbCommand cmd) : base(cmd)
         {
         }
 
@@ -46,7 +48,7 @@ public abstract class AdvancedTypedRepository<T> : BaseRepository where T : clas
             {
                 _Fields += $"{(i == 0 ? parameters[i].field : $", {parameters[i].field}")}";
                 _Values += $"{(i == 0 ? "" : $", ")}@{parameters[i].field}";
-                _cmd.Parameters.AddWithValue(parameters[i].field, parameters[i].value);
+                _cmd.AddWithValue(parameters[i].field, parameters[i].value);
             }
 
             _cmd.CommandText += $" ({_Fields}) VALUES ({_Values})";
@@ -62,7 +64,7 @@ public abstract class AdvancedTypedRepository<T> : BaseRepository where T : clas
     public class UpdateCommand : AdvancedCommand
     {
         string _FieldValues = "";
-        public UpdateCommand(SqlCommand cmd) : base(cmd)
+        public UpdateCommand(IDbCommand cmd) : base(cmd)
         {
         }
 
@@ -73,7 +75,7 @@ public abstract class AdvancedTypedRepository<T> : BaseRepository where T : clas
             for (int i = 0; i < parameters.Length; i++)
             {
                 _FieldValues += $"{(i == 0 ? "" : ",")} {parameters[i].field} = @{parameters[i].field}";
-                _cmd.Parameters.AddWithValue(parameters[i].field, parameters[i].value);
+                _cmd.AddWithValue(parameters[i].field, parameters[i].value);
             }
 
             _cmd.CommandText += _FieldValues;
@@ -94,7 +96,7 @@ public abstract class AdvancedTypedRepository<T> : BaseRepository where T : clas
         => new DeleteCommand(CreateCommand($"DELETE {_TableName} "));
     public class DeleteCommand : AdvancedCommand
     {
-        public DeleteCommand(SqlCommand cmd) : base(cmd)
+        public DeleteCommand(IDbCommand cmd) : base(cmd)
         {
         }
 
@@ -109,9 +111,9 @@ public abstract class AdvancedTypedRepository<T> : BaseRepository where T : clas
 
     public class AdvancedCommandReady
     {
-        SqlCommand _cmd;
+        IDbCommand _cmd;
 
-        public AdvancedCommandReady(SqlCommand cmd)
+        public AdvancedCommandReady(IDbCommand cmd)
         {
             _cmd = cmd;
         }

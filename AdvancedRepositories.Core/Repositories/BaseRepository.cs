@@ -1,6 +1,9 @@
 ﻿using AdvancedRepositories.Core.Configuration;
 using AdvancedRepositories.Core.Extensions;
 using FluentRepositories.Attributes;
+using Microsoft.Data.Sqlite;
+using System.Data;
+using System.Data.Common;
 using System.Data.SqlClient;
 using System.Reflection;
 
@@ -8,14 +11,21 @@ namespace AdvancedRepositories.Core.Repositories;
 
 public abstract class BaseRepository : IDisposable
 {
-    protected SqlConnection _con;
-    protected SqlTransaction _transaction;
+    protected IDbConnection _con;
+    protected IDbTransaction _transaction;
     protected BaseDatabaseConfiguration _dbConfig;
 
     public BaseRepository(BaseDatabaseConfiguration dbConfig)
     {
         _dbConfig = dbConfig;
-        _con = new SqlConnection(_dbConfig.ConnectionString());
+
+        _con = _dbConfig.DatabaseType switch
+        {
+            DatabaseType.SqlServer => new SqlConnection(_dbConfig.ConnectionString()),
+            DatabaseType.InMemory => new SqliteConnection(_dbConfig.ConnectionString()),
+            _ => throw new ArgumentNullException("A DatabaseType was not specified for the DatabaseConfiguration.")
+        };
+
         _con.Open();
         _transaction = _con.BeginTransaction();
     }
@@ -51,15 +61,23 @@ public abstract class BaseRepository : IDisposable
         return queryFields;
     }
 
-    protected SqlCommand CreateCommand() 
-        => new SqlCommand("", _con, _transaction);
+    protected IDbCommand CreateCommand()
+        => _dbConfig.DatabaseType switch
+        {
+            DatabaseType.SqlServer => new SqlCommand("", (SqlConnection)_con, (SqlTransaction)_transaction),
+            DatabaseType.InMemory => new SqliteCommand("", (SqliteConnection?)_con, (SqliteTransaction?)_transaction),
+        };
 
-    protected SqlCommand CreateCommand(string query)
+    protected IDbCommand CreateCommand(string query)
     {
         if(string.IsNullOrWhiteSpace(query)) 
             throw new ArgumentNullException("The query string can not be null nor empty");
 
-        return new SqlCommand(query, _con, _transaction); ;
+        return _dbConfig.DatabaseType switch
+        {
+            DatabaseType.SqlServer => new SqlCommand(query, (SqlConnection)_con, (SqlTransaction)_transaction),
+            DatabaseType.InMemory => new SqliteCommand(query, (SqliteConnection?)_con, (SqliteTransaction?)_transaction),
+        };
     }
 
     public void Dispose()
